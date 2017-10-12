@@ -11,7 +11,10 @@
 	},
 	"main": "dist/index.js",
 	"module": "index.js",
-	"files": ["dist", "src"],
+	"files": [
+		"dist",
+		"src"
+	],
 	"engines": {
 		"node": ">=8.6.0"
 	},
@@ -48,20 +51,18 @@
 		"test-action": "node ./dist/src/action.test.js",
 		"test-passed": "node ./dist/src/passed/passed.test.js",
 		"test-from-function": "node ./dist/src/fromFunction/fromFunction.test.js",
-		"test-run":
-			"npm run test-action && npm run test-all && npm run test-from-function && npm run test-passed",
+		"test-run": "npm run test-action && npm run test-all && npm run test-from-function && npm run test-passed",
 		"test": "npm run test-before && npm run test-run",
 		"test-cover": "npm run test-before && nyc npm run test-run",
 		"test-cover-clean": "rimraf .nyc_output && rimraf coverage && rimraf coverage.lcov",
 		"test-cover-html": "nyc report --reporter=lcov",
 		"test-cover-lcov": "nyc report --reporter=text-lcov > coverage.lcov",
-		"test-cover-upload":
-			"npm run test-cover-lcov && codecov --token=33b885f3-15b3-486f-82f2-3a4009e45d2b",
+		"test-cover-upload": "npm run test-cover-lcov && codecov --token=33b885f3-15b3-486f-82f2-3a4009e45d2b",
 		"repo-reset": "npm run code-clean && npm run test-cover-clean && rimraf node_modules",
 		"repo-reinstall": "npm run repo-reset && npm install",
 		"build": "npm run code-compile",
 		"compile": "npm run code-compile",
-		"prepublishOnly": "npm run dist",
+		"prepublishOnly": "npm run code-compile",
 		"reinstall": "npm run repo-reinstall"
 	}
 }
