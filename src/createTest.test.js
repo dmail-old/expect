@@ -1,5 +1,5 @@
 import { test } from "./test.js"
-import { ensure } from "./ensure.js"
+import { createTest } from "./createTest.js"
 
 test("ensure.js", ({ ensure: it, assert }) => {
 	// faut tester que: la fonction run à allocatedMs pour se résoudre
@@ -13,7 +13,7 @@ test("ensure.js", ({ ensure: it, assert }) => {
 	it("return a function to run expectations", () => {
 		const firstExpectation = () => {}
 
-		const run = ensure(
+		const run = createTest(
 			{
 				"first expectation description": firstExpectation
 			},
