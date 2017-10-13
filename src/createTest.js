@@ -1,63 +1,65 @@
-import { fromFunctionWithAllocableMs, aroundAction } from "@dmail/action"
+import {
+	passed,
+	failed,
+	fromFunctionWithAllocableMs,
+	aroundAction,
+	sequence,
+	all
+} from "@dmail/action"
 
 const createFunctionCallingFirst = (fn, fnCalledAfter) => (...args) => {
 	fn(...args)
 	return fnCalledAfter(...args)
 }
 
-// this is basically the same than sequence
-// but a sequence that would collect instead of fail first
-// add call allocateMs on each of its action
-export const composeTests = (iterable, createTest) => {
-	const runTest = ({ allocatedMs = 100 } = {}) =>
-		fromFunctionWithAllocableMs(
-			createFunctionCallingFirst(
-				({ allocateMs }) => allocateMs(allocatedMs),
-				({ fail, pass, getRemainingMs }) => {
-					const iterator = iterable[Symbol.iterator]()
-					const compositeReport = []
-					let someHasFailed = false
+// should be modified to handle input iterable and output an other iterable
+// instead of considering iterable is always an array
+// const mapIterable = (iterable, fn) => iterable.map(fn)
 
-					const iterate = index => {
-						const { done, value } = iterator.next()
-						if (done) {
-							if (someHasFailed) {
-								return fail(compositeReport)
-							}
-							return pass(compositeReport)
-						}
+const createCompositeAction = (
+	iterable,
+	{ createActionFromValue = v => v, how = "sequentially" } = {}
+) => {
+	const mapAction = value =>
+		passed(createActionFromValue(value)).then(
+			result => ({ state: "passed", result }),
+			// transform failed into passed so that sequence & all does not stop on first failure
+			result => passed({ state: "failed", result })
+		)
+	// but once sequence/all are done, refails it when needed
+	const failWhenSomeIsFailed = reports =>
+		reports.some(({ state }) => state === "failed") ? failed(reports) : passed(reports)
 
-						const test = fromFunctionWithAllocableMs(
+	if (how === "sequentially") {
+		return sequence(iterable, mapAction).then(failWhenSomeIsFailed)
+	}
+	return all(iterable, mapAction).then(failWhenSomeIsFailed)
+}
+
+const createCompositeActionWithAllocableMs = (
+	iterable,
+	{ createActionFromValue = v => v, how = "sequentially", allocatedMs = Infinity } = {}
+) => {
+	return fromFunctionWithAllocableMs(
+		createFunctionCallingFirst(
+			({ allocateMs }) => allocateMs(allocatedMs),
+			({ getRemainingMs }) =>
+				createCompositeAction(iterable, {
+					createActionFromValue: value => {
+						fromFunctionWithAllocableMs(
 							createFunctionCallingFirst(
 								({ allocateMs }) => allocateMs(getRemainingMs()),
-								createTest(value)
+								// donc là, la fonction à x temps pour se faire
+								// sauf qu'en fait on veut appeler createActionFromvalue dessus
+								// mais
+								createActionFromValue(value)
 							)
 						)
-						test.then(
-							result => {
-								const passedReport = {
-									state: "passed",
-									result
-								}
-								compositeReport[index] = passedReport
-								iterate(index + 1)
-							},
-							result => {
-								someHasFailed = true
-								const failedReport = {
-									state: "failed",
-									result
-								}
-								compositeReport[index] = failedReport
-								iterate(index + 1)
-							}
-						)
-					}
-					iterate(0)
-				}
-			)
+					},
+					how
+				})
 		)
-	return runTest
+	)
 }
 
 const createExpectationsFromObject = expectationsObject =>
@@ -71,7 +73,7 @@ const createExpectationsFromObject = expectationsObject =>
 export const createTest = expectationsObject => {
 	const expectations = createExpectationsFromObject(expectationsObject)
 	const runTest = ({ beforeEach = () => {}, afterEach = () => {} } = {}) => {
-		composeTests(expectations, ({ description, fn }) =>
+		createCompositeActionWithAllocableMs(expectations, ({ description, fn }) =>
 			aroundAction(() => beforeEach(description), fn, (result, passed) =>
 				afterEach(description, result, passed)
 			)
