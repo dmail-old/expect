@@ -1,7 +1,8 @@
+import { createSpy } from "@dmail/spy"
 import { test } from "./test.js"
 import { createTest } from "./createTest.js"
 
-test("ensure.js", ({ ensure: it, assert }) => {
+test("ensure.js", ({ ensure, assert }) => {
 	// faut tester que: la fonction run à allocatedMs pour se résoudre
 	// chaque expectation "hérite" de remainingMs
 	// chaque expectation est run en série
@@ -10,14 +11,34 @@ test("ensure.js", ({ ensure: it, assert }) => {
 	// beforeEach, afterEach est applé avant/après chaque expectation
 	// la fonctionnalité @@autorun
 
-	it("return a function to run expectations", () => {
-		const firstExpectation = () => {}
+	ensure("return a function to run expectations", () => {
+		const expectationDescription = "desc"
+		const expectationFunction = createSpy(({ pass }) => pass("hello world"))
+		const beforeEach = createSpy()
+		const afterEach = createSpy()
+		const test = createTest({
+			[expectationDescription]: expectationFunction
+		})
 
-		const run = createTest(
+		const action = test({
+			allocatedMs: 10,
+			beforeEach,
+			afterEach
+		})
+
+		assert.equal(action.getState(), "passed")
+		assert.deepEqual(action.getResult(), [
 			{
-				"first expectation description": firstExpectation
-			},
-			{ allocatedMs: 10 }
-		)
+				state: "passed",
+				result: "hello world"
+			}
+		])
+		assert.deepEqual(beforeEach.getCall(0).getArguments(), [expectationDescription])
+		assert.deepEqual(afterEach.getCall(0).getArguments(), [
+			expectationDescription,
+			"hello world",
+			true
+		])
+		assert.equal(typeof expectationFunction.getCall(0).getArguments()[0].allocateMs, "function")
 	})
 })
