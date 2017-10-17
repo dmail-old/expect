@@ -1,8 +1,9 @@
+import { test } from "@dmail/test-cheap"
 import { createSpy } from "@dmail/spy"
-import { test } from "./test.js"
+import assert from "assert"
 import { createTest } from "./createTest.js"
 
-test("ensure.js", ({ ensure, assert }) => {
+test("ensure.js", ({ ensure }) => {
 	// faut tester que: la fonction run à allocatedMs pour se résoudre
 	// chaque expectation "hérite" de remainingMs
 	// chaque expectation est run en série
@@ -33,12 +34,12 @@ test("ensure.js", ({ ensure, assert }) => {
 				result: "hello world"
 			}
 		])
-		assert.deepEqual(beforeEach.getCall(0).getArguments(), [expectationDescription])
-		assert.deepEqual(afterEach.getCall(0).getArguments(), [
+		assert.deepEqual(beforeEach.getReport(0).argValues, [expectationDescription])
+		assert.deepEqual(afterEach.getReport(0).argValues, [
 			expectationDescription,
 			"hello world",
 			true
 		])
-		assert.equal(typeof expectationFunction.getCall(0).getArguments()[0].allocateMs, "function")
+		assert.equal(typeof expectationFunction.getReport(0).argValues[0].allocateMs, "function")
 	})
 })

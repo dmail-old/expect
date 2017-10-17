@@ -8,6 +8,9 @@ const createExpectationsFromObject = expectationsObject =>
 		}
 	})
 
+// here or near this file we'll make an other function that use glob-gitignore
+// to run all test, not only one
+
 export const createTest = expectationsObject => {
 	const expectations = createExpectationsFromObject(expectationsObject)
 	const runTest = ({ beforeEach = () => {}, afterEach = () => {}, allocatedMs } = {}) =>
