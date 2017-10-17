@@ -1,6 +1,6 @@
-import { failed } from "../../expect.js"
+import { failed } from "@dmail/action"
 import { createMatcher, createExpectFromMatcher } from "../expectMatch.js"
-import { expectNumber } from "../../expectType/expectType.js"
+import { expectNumber } from "../expectType/expectType.js"
 
 export const matchMinimum = min =>
 	createMatcher(actual => {

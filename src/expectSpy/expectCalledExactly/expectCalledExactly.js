@@ -1,4 +1,4 @@
-import { fromFunction } from "../../expect.js"
+import { fromFunction } from "@dmail/action"
 
 export const createCalledExactlyFailedMessage = (spy, actual, expected) => {
 	let message

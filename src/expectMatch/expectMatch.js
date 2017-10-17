@@ -5,8 +5,8 @@
 // expectCalledWith(spy, matchClose(10))
 // expectCalledWith(spy, matchBetween(5, 15))
 
-import { fromFunction } from "../expect.js"
-import { uneval } from "../uneval.js"
+import { fromFunction } from "@dmail/action"
+import { uneval } from "@dmail/uneval"
 
 const matchSymbol = Symbol()
 
@@ -31,7 +31,5 @@ export const createExpectFromMatcher = matcher => (actual, ...args) =>
 
 export const expectTrue = actual => expectMatch(actual, true)
 export const expectFalse = actual => expectMatch(actual, false)
-// const expectEmptyString = actual => expectIs(actual, '')
-// const expectZero = actual => expectIs(actual, 0)
-// const expectNull = actual => expectIs(actual, null)
-// const expectUndefined = actual => expectIs(actual, undefined)
+export const expectNull = actual => expectMatch(actual, null)
+export const expectUndefined = actual => expectMatch(actual, undefined)

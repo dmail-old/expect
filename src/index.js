@@ -5,4 +5,3 @@ export * from "./createTest.js"
 
 export * from "./expectMatch/index.js"
 export * from "./expectSpy/index.js"
-export * from "./expectType/expectType.js"

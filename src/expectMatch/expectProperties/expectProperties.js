@@ -1,6 +1,6 @@
+import { failed, all, any, passed } from "@dmail/action"
 import { expectMatch, createMatcher, createExpectFromMatcher } from "../expectMatch.js"
-import { failed, all, any, passed } from "../../expect.js"
-import { expectObject, expectFunction } from "../../expectType/expectType.js"
+import { expectObject, expectFunction } from "../expectType/expectType.js"
 
 const compareProperties = (actual, expected, { allowExtra = false, allowMissing = false } = {}) =>
 	any([expectObject(actual), expectFunction(actual)]).then(() => {
@@ -44,7 +44,14 @@ export const matchPropertyNames = expected =>
 	createMatcher(actual => {
 		compareProperties(actual, mapObject(expected, matchAny), { allowExtra: false })
 	})
+export const matchPropertyNamesAllowingExtra = expected =>
+	createMatcher(actual => {
+		compareProperties(actual, mapObject(expected, matchAny), { allowExtra: true })
+	})
+
 export const expectProperties = createExpectFromMatcher(matchProperties)
 export const expectPropertiesAllowingExtra = createExpectFromMatcher(matchPropertiesAllowingExtra)
 export const expectPropertyNames = createExpectFromMatcher(matchPropertyNames)
-// expectPropertyNamesAllowingExtra
+export const expectPropertyNamesAllowingExtra = createExpectFromMatcher(
+	matchPropertyNamesAllowingExtra
+)

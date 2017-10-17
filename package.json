@@ -21,7 +21,7 @@
 	"dependencies": {
 		"@dmail/action": "1.2.0",
 		"@dmail/spy": "0.0.2",
-		"@dmail/uneval": "*"
+		"@dmail/uneval": "0.0.1"
 	},
 	"devDependencies": {
 		"@dmail/command": "0.1.1",

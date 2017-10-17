@@ -1,11 +1,16 @@
-import { all } from "../../expect.js"
+import { all } from "@dmail/action"
 
 import { expectCalledExactly } from "../expectCalledExactly/expectCalledExactly.js"
 import { expectCalledWith } from "../expectCalledWith/expectCalledWith.js"
+import { createIndexes } from "../../helper.js"
 
 export const expectCalledExactlyWith = (spy, expectedCallCount, ...expectedArgs) =>
 	expectCalledExactly(spy, expectedCallCount).then(() =>
-		all(spy.getCalls().map(call => expectCalledWith(call, ...expectedArgs)))
+		all(
+			createIndexes(expectedCallCount).map(index =>
+				expectCalledWith(spy.track(index), ...expectedArgs)
+			)
+		)
 	)
 export const expectCalledOnceWith = (spy, ...expectedArgs) =>
 	expectCalledExactlyWith(spy, 1, ...expectedArgs)
