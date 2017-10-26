@@ -1,5 +1,5 @@
-import { failed } from "@dmail/action"
-import { createMatcher, createExpectFromMatcher } from "../expectMatch.js"
+import { failed, passed } from "@dmail/action"
+import { createMatcher, createExpectFromMatcherFactory } from "../expectMatch.js"
 import { expectNumber } from "../expectType/expectType.js"
 
 export const matchClose = (number, allowedDistance = 1) =>
@@ -9,6 +9,7 @@ export const matchClose = (number, allowedDistance = 1) =>
 			if (distance > allowedDistance) {
 				return failed(`expect close to ${number} (+/-${allowedDistance}) but got ${actual}`)
 			}
+			return passed()
 		})
 	)
-export const expectClose = createExpectFromMatcher(matchClose)
+export const expectClose = createExpectFromMatcherFactory(matchClose)

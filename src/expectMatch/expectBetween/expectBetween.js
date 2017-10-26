@@ -1,27 +1,29 @@
-import { failed } from "@dmail/action"
-import { createMatcher, createExpectFromMatcher } from "../expectMatch.js"
+import { failed, passed } from "@dmail/action"
+import { createMatcher, createExpectFromMatcherFactory } from "../expectMatch.js"
 import { expectNumber } from "../expectType/expectType.js"
 
-export const matchMinimum = min =>
+export const matchAbove = above =>
 	createMatcher(actual => {
-		if (actual < min) {
-			return failed(`expect min ${min} but got ${actual}`)
+		if (actual <= above) {
+			return failed(`expect value above ${above} but got ${actual}`)
 		}
+		return passed()
 	})
-export const expectMinimum = createExpectFromMatcher(matchMinimum)
+export const expectAbove = createExpectFromMatcherFactory(matchAbove)
 
-export const matchMaximum = max =>
+export const matchBelow = below =>
 	createMatcher(actual => {
-		if (actual < max) {
-			return failed(`expect max ${max} but got ${actual}`)
+		if (actual >= below) {
+			return failed(`expect value below ${below} but got ${actual}`)
 		}
+		return passed()
 	})
-export const expectMaximum = createExpectFromMatcher(matchMaximum)
+export const expectBelow = createExpectFromMatcherFactory(matchBelow)
 
-export const matchBetween = (min, max) =>
+export const matchBetween = (above, below) =>
 	createMatcher(actual =>
 		expectNumber(actual)
-			.then(() => expectMinimum(actual, min))
-			.then(() => expectMaximum(actual, max))
+			.then(() => expectAbove(actual, above))
+			.then(() => expectBelow(actual, below))
 	)
-export const expectBetween = createExpectFromMatcher(matchBetween)
+export const expectBetween = createExpectFromMatcherFactory(matchBetween)

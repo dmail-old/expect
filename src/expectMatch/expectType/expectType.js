@@ -1,5 +1,5 @@
-import { failed } from "@dmail/action"
-import { createMatcher, createExpectFromMatcher } from "../expectMatch.js"
+import { failed, passed } from "@dmail/action"
+import { createMatcher, createExpectFromMatcherFactory } from "../expectMatch.js"
 
 const prefix = type => {
 	if (type === "null" || type === "undefined") {
@@ -21,13 +21,14 @@ export const matchType = type =>
 		if (actualType !== type) {
 			return failed(createFailedTypeMessage(value, actualType, type))
 		}
+		return passed()
 	})
 
-export const matchFunction = matchType("function")
-export const matchObject = matchType("object")
-export const matchNumber = matchType("number")
+export const matchFunction = () => matchType("function")
+export const matchObject = () => matchType("object")
+export const matchNumber = () => matchType("number")
 
-export const expectType = createExpectFromMatcher(matchType)
-export const expectFunction = createExpectFromMatcher(matchFunction)
-export const expectObject = createExpectFromMatcher(matchObject)
-export const expectNumber = createExpectFromMatcher(matchNumber)
+export const expectType = createExpectFromMatcherFactory(matchType)
+export const expectFunction = createExpectFromMatcherFactory(matchFunction)
+export const expectObject = createExpectFromMatcherFactory(matchObject)
+export const expectNumber = createExpectFromMatcherFactory(matchNumber)

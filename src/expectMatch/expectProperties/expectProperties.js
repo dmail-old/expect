@@ -1,5 +1,5 @@
 import { failed, all, any, passed } from "@dmail/action"
-import { expectMatch, createMatcher, createExpectFromMatcher } from "../expectMatch.js"
+import { expectMatch, createMatcher, createExpectFromMatcherFactory } from "../expectMatch.js"
 import { expectObject, expectFunction } from "../expectType/expectType.js"
 
 const compareProperties = (actual, expected, { allowExtra = false, allowMissing = false } = {}) =>
@@ -49,9 +49,11 @@ export const matchPropertyNamesAllowingExtra = expected =>
 		compareProperties(actual, mapObject(expected, matchAny), { allowExtra: true })
 	})
 
-export const expectProperties = createExpectFromMatcher(matchProperties)
-export const expectPropertiesAllowingExtra = createExpectFromMatcher(matchPropertiesAllowingExtra)
-export const expectPropertyNames = createExpectFromMatcher(matchPropertyNames)
-export const expectPropertyNamesAllowingExtra = createExpectFromMatcher(
+export const expectProperties = createExpectFromMatcherFactory(matchProperties)
+export const expectPropertiesAllowingExtra = createExpectFromMatcherFactory(
+	matchPropertiesAllowingExtra
+)
+export const expectPropertyNames = createExpectFromMatcherFactory(matchPropertyNames)
+export const expectPropertyNamesAllowingExtra = createExpectFromMatcherFactory(
 	matchPropertyNamesAllowingExtra
 )

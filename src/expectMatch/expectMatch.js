@@ -12,8 +12,8 @@ const matchSymbol = Symbol()
 
 export const expectMatch = (actual, expected) =>
 	fromFunction(({ fail, pass }) => {
-		if (expected.hasOwnProperty(matchSymbol)) {
-			return expected[matchSymbol](actual, fail, pass)
+		if (expected !== null && expected !== undefined && expected.hasOwnProperty(matchSymbol)) {
+			return expected[matchSymbol](actual)
 		}
 		if (actual !== expected) {
 			return fail(`${uneval(actual)} does not match ${uneval(expected)}`)
@@ -26,7 +26,7 @@ export const createMatcher = fn => {
 		[matchSymbol]: fn
 	}
 }
-export const createExpectFromMatcher = matcher => (actual, ...args) =>
+export const createExpectFromMatcherFactory = matcher => (actual, ...args) =>
 	expectMatch(actual, matcher(...args))
 
 export const expectTrue = actual => expectMatch(actual, true)
