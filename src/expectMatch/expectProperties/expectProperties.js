@@ -1,38 +1,58 @@
 import { failed, all, any, passed } from "@dmail/action"
 import { expectMatch, createMatcher, createExpectFromMatcherFactory } from "../expectMatch.js"
-import { expectObject, expectFunction } from "../expectType/expectType.js"
+import { expectObject, expectFunction, prefix } from "../expectType/expectType.js"
+import { uneval } from "@dmail/uneval"
 
 const compareProperties = (actual, expected, { allowExtra = false, allowMissing = false } = {}) =>
-	any([expectObject(actual), expectFunction(actual)]).then(() => {
-		const actualPropertyNames = Object.keys(actual)
-		const expectedPropertyNames = Object.keys(expected)
-		const propertyExpectations = []
+	any([expectObject(actual), expectFunction(actual)]).then(
+		() => {
+			const actualPropertyNames = Object.keys(actual)
+			const expectedPropertyNames = Object.keys(expected)
+			const propertyExpectations = []
 
-		expectedPropertyNames.forEach(name => {
-			if (actualPropertyNames.includes(name)) {
-				propertyExpectations.push(expectMatch(actual[name], expected[name]))
-			} else if (allowMissing === false) {
-				propertyExpectations.push(failed(`missing ${name} property`))
-			}
-		})
-
-		if (allowExtra === false) {
-			actualPropertyNames.forEach(name => {
-				if (expectedPropertyNames.includes(name) === false) {
-					propertyExpectations.push(failed(`unexpected ${name} property`))
+			expectedPropertyNames.forEach(name => {
+				if (actualPropertyNames.includes(name)) {
+					propertyExpectations.push(
+						expectMatch(actual[name], expected[name]).then(
+							null,
+							message => `${name} property mismatch: ${message}`
+						)
+					)
+				} else if (allowMissing === false) {
+					propertyExpectations.push(failed(`missing ${name} property`))
 				}
 			})
-		}
 
-		return all(propertyExpectations)
-	})
+			if (allowExtra === false) {
+				actualPropertyNames.forEach(name => {
+					if (expectedPropertyNames.includes(name) === false) {
+						propertyExpectations.push(failed(`unexpected ${name} property`))
+					}
+				})
+			}
 
-const mapObject = (object, fn) => {
-	const mappedObject = {}
-	Object.keys(object).forEach((name, index) => {
-		mappedObject[name] = fn(name, index, object[name], object)
+			return all(propertyExpectations)
+		},
+		() =>
+			failed(
+				`expect a function or an object to compare properties but got a ${prefix(
+					typeof actual
+				)}: ${uneval(actual)} `
+			)
+	)
+
+// const mapObject = (object, fn) => {
+// 	const mappedObject = {}
+// 	Object.keys(object).forEach((name, index) => {
+// 		mappedObject[name] = fn(name, index, object[name], object)
+// 	})
+// 	return mappedObject
+// }
+const fillObjectProperties = (object, names, value) => {
+	names.forEach(name => {
+		object[name] = value
 	})
-	return mappedObject
+	return object
 }
 const matchAny = () => createMatcher(() => passed())
 
@@ -40,14 +60,18 @@ export const matchProperties = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: false }))
 export const matchPropertiesAllowingExtra = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: true }))
-export const matchPropertyNames = expected =>
-	createMatcher(actual => {
-		compareProperties(actual, mapObject(expected, matchAny), { allowExtra: false })
-	})
-export const matchPropertyNamesAllowingExtra = expected =>
-	createMatcher(actual => {
-		compareProperties(actual, mapObject(expected, matchAny), { allowExtra: true })
-	})
+export const matchPropertyNames = (...expectedPropertyNames) =>
+	createMatcher(actual =>
+		compareProperties(actual, fillObjectProperties({}, expectedPropertyNames, matchAny()), {
+			allowExtra: false
+		})
+	)
+export const matchPropertyNamesAllowingExtra = (...expectedPropertyNames) =>
+	createMatcher(actual =>
+		compareProperties(actual, fillObjectProperties({}, expectedPropertyNames, matchAny), {
+			allowExtra: true
+		})
+	)
 
 export const expectProperties = createExpectFromMatcherFactory(matchProperties)
 export const expectPropertiesAllowingExtra = createExpectFromMatcherFactory(
