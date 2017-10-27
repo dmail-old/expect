@@ -26,8 +26,8 @@ export const createMatcher = fn => {
 		[matchSymbol]: fn
 	}
 }
-export const createExpectFromMatcherFactory = matcher => (actual, ...args) =>
-	expectMatch(actual, matcher(...args))
+export const createExpectFromMatcherFactory = matcherFactory => (actual, ...args) =>
+	expectMatch(actual, matcherFactory(...args))
 
 export const expectTrue = actual => expectMatch(actual, true)
 export const expectFalse = actual => expectMatch(actual, false)

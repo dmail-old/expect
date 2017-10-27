@@ -1,29 +1,24 @@
-import { failed, passed } from "@dmail/action"
+import { failed } from "@dmail/action"
 import { createMatcher, createExpectFromMatcherFactory } from "../expectMatch.js"
-import { expectNumber } from "../expectType/expectType.js"
-
-export const matchAbove = above =>
-	createMatcher(actual => {
-		if (actual <= above) {
-			return failed(`expect value above ${above} but got ${actual}`)
-		}
-		return passed()
-	})
-export const expectAbove = createExpectFromMatcherFactory(matchAbove)
-
-export const matchBelow = below =>
-	createMatcher(actual => {
-		if (actual >= below) {
-			return failed(`expect value below ${below} but got ${actual}`)
-		}
-		return passed()
-	})
-export const expectBelow = createExpectFromMatcherFactory(matchBelow)
+import { expectNumber, prefix } from "../expectType/expectType.js"
+import { expectAbove } from "../expectAbove/expectAbove.js"
+import { expectBelow } from "../expectBelow/expectBelow.js"
 
 export const matchBetween = (above, below) =>
 	createMatcher(actual =>
-		expectNumber(actual)
-			.then(() => expectAbove(actual, above))
-			.then(() => expectBelow(actual, below))
+		expectNumber(actual).then(
+			() =>
+				expectAbove(actual, above).then(
+					() =>
+						expectBelow(actual, below).then(null, () =>
+							failed(`expect value between ${above} and ${below} but got ${actual}`)
+						),
+					() => failed(`expect value between ${above} and ${below} but got ${actual}`)
+				),
+			() =>
+				failed(
+					`expect value between ${above} and ${below} but got ${prefix(typeof actual)}: ${actual}`
+				)
+		)
 	)
 export const expectBetween = createExpectFromMatcherFactory(matchBetween)
