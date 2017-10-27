@@ -14,11 +14,11 @@ const assertFailedWith = (action, value) => {
 
 export default createTest({
 	"expectAbove(9, 10)": ({ pass }) => {
-		assertFailedWith(expectAbove(9, 10), "expect value above 10 but got 9")
+		assertFailedWith(expectAbove(9, 10), "expect a number above 10 but got 9")
 		pass()
 	},
 	"expectAbove(10, 10)": ({ pass }) => {
-		assertFailedWith(expectAbove(10, 10), "expect value above 10 but got 10")
+		assertFailedWith(expectAbove(10, 10), "expect a number above 10 but got 10")
 		pass()
 	},
 	"expectAbove(11, 10)": ({ pass }) => {
@@ -26,7 +26,7 @@ export default createTest({
 		pass()
 	},
 	"expectAbove(true, 10)": ({ pass }) => {
-		assertFailedWith(expectAbove(true, 10), "expect value above 10 but got a boolean: true")
+		assertFailedWith(expectAbove(true, 10), "expect a number above 10 but got a boolean: true")
 		pass()
 	}
 })

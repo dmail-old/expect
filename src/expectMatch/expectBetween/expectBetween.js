@@ -11,13 +11,15 @@ export const matchBetween = (above, below) =>
 				expectAbove(actual, above).then(
 					() =>
 						expectBelow(actual, below).then(null, () =>
-							failed(`expect value between ${above} and ${below} but got ${actual}`)
+							failed(`expect a number between ${above} and ${below} but got ${actual}`)
 						),
-					() => failed(`expect value between ${above} and ${below} but got ${actual}`)
+					() => failed(`expect a number between ${above} and ${below} but got ${actual}`)
 				),
 			() =>
 				failed(
-					`expect value between ${above} and ${below} but got ${prefix(typeof actual)}: ${actual}`
+					`expect a number between ${above} and ${below} but got ${prefix(
+						typeof actual
+					)}: ${actual}`
 				)
 		)
 	)

@@ -18,15 +18,15 @@ export default createTest({
 		pass()
 	},
 	"expectBelow 10 with 10": ({ pass }) => {
-		assertFailedWith(expectBelow(10, 10), "expect value below 10 but got 10")
+		assertFailedWith(expectBelow(10, 10), "expect a number below 10 but got 10")
 		pass()
 	},
 	"expectBelow 10 with 11": ({ pass }) => {
-		assertFailedWith(expectBelow(11, 10), "expect value below 10 but got 11")
+		assertFailedWith(expectBelow(11, 10), "expect a number below 10 but got 11")
 		pass()
 	},
 	"expectAbove(true, 10)": ({ pass }) => {
-		assertFailedWith(expectBelow(true, 10), "expect value below 10 but got a boolean: true")
+		assertFailedWith(expectBelow(true, 10), "expect a number below 10 but got a boolean: true")
 		pass()
 	}
 })

@@ -14,11 +14,11 @@ const assertFailedWith = (action, value) => {
 
 export default createTest({
 	"expectBetween 10, 11 with 10": ({ pass }) => {
-		assertFailedWith(expectBetween(10, 10, 11), "expect value between 10 and 11 but got 10")
+		assertFailedWith(expectBetween(10, 10, 11), "expect a number between 10 and 11 but got 10")
 		pass()
 	},
 	"expectBetween 10, 11 with 11": ({ pass }) => {
-		assertFailedWith(expectBetween(11, 10, 11), "expect value between 10 and 11 but got 11")
+		assertFailedWith(expectBetween(11, 10, 11), "expect a number between 10 and 11 but got 11")
 		pass()
 	},
 	"expectBetween 10, 11 with 10.5": ({ pass }) => {
@@ -28,7 +28,7 @@ export default createTest({
 	"expectBeeetwen 10, 11 with true": ({ pass }) => {
 		assertFailedWith(
 			expectBetween(true, 10, 11),
-			"expect value between 10 and 11 but got a boolean: true"
+			"expect a number between 10 and 11 but got a boolean: true"
 		)
 		pass()
 	}

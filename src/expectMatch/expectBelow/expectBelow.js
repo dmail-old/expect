@@ -7,11 +7,11 @@ export const matchBelow = below =>
 		expectNumber(actual).then(
 			() => {
 				if (actual >= below) {
-					return failed(`expect value below ${below} but got ${actual}`)
+					return failed(`expect a number below ${below} but got ${actual}`)
 				}
 				return passed()
 			},
-			() => failed(`expect value below ${below} but got ${prefix(typeof actual)}: ${actual}`)
+			() => failed(`expect a number below ${below} but got ${prefix(typeof actual)}: ${actual}`)
 		)
 	)
 export const expectBelow = createExpectFromMatcherFactory(matchBelow)

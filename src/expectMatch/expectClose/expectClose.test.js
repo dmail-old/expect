@@ -26,7 +26,7 @@ export default createTest({
 		pass()
 	},
 	"expectClose(9, 10, 0)": ({ pass }) => {
-		assertFailedWith(expectClose(9, 10, 0), "expect close to 10 (+/-0) but got 9")
+		assertFailedWith(expectClose(9, 10, 0), "expect a number close to 10 (+/-0) but got 9")
 		pass()
 	},
 	"expectClose(10, 10, 0)": ({ pass }) => {
@@ -34,11 +34,14 @@ export default createTest({
 		pass()
 	},
 	"expectClose(11, 10, 0)": ({ pass }) => {
-		assertFailedWith(expectClose(11, 10, 0), "expect close to 10 (+/-0) but got 11")
+		assertFailedWith(expectClose(11, 10, 0), "expect a number close to 10 (+/-0) but got 11")
 		pass()
 	},
-	"expectClose(true, 0)": ({ pass }) => {
-		assertFailedWith(expectClose(true, 10, 0), "expect a number but got a boolean")
+	"expectClose(true, 10, 0)": ({ pass }) => {
+		assertFailedWith(
+			expectClose(true, 10, 0),
+			"expect a number close to 10 (+/-0) but got a boolean: true"
+		)
 		pass()
 	}
 })
