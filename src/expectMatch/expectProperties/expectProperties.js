@@ -68,7 +68,7 @@ export const matchPropertyNames = (...expectedPropertyNames) =>
 	)
 export const matchPropertyNamesAllowingExtra = (...expectedPropertyNames) =>
 	createMatcher(actual =>
-		compareProperties(actual, fillObjectProperties({}, expectedPropertyNames, matchAny), {
+		compareProperties(actual, fillObjectProperties({}, expectedPropertyNames, matchAny()), {
 			allowExtra: true
 		})
 	)

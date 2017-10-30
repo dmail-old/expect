@@ -1,7 +1,8 @@
 import {
 	expectProperties,
-	expectPropertyNames
-	// expectPropertiesAllowingExtra
+	expectPropertiesAllowingExtra,
+	expectPropertyNames,
+	expectPropertyNamesAllowingExtra
 } from "./expectProperties.js"
 import { createTest } from "@dmail/test"
 import { matchBelow } from "../expectBelow/expectBelow.js"
@@ -37,8 +38,26 @@ export default createTest({
 		)
 		pass()
 	},
+	"expectPropertiesAllowingExtra({foo: 10}, {})": ({ pass }) => {
+		assertPassedWith(expectPropertiesAllowingExtra({ foo: 10 }, {}), [])
+		pass()
+	},
+	"expectPropertiesAllowingExtra({foo: 10, bar: true}, {foo: 10})": ({ pass }) => {
+		assertPassedWith(expectPropertiesAllowingExtra({ foo: 10, bar: true }, { foo: 10 }), [
+			undefined
+		])
+		pass()
+	},
 	"expectPropertyNames({foo: true}, 'foo')": ({ pass }) => {
 		assertPassedWith(expectPropertyNames({ foo: true }, "foo"), [undefined])
+		pass()
+	},
+	"expectPropertyNamesAllowingExtra({foo: true})": ({ pass }) => {
+		assertPassedWith(expectPropertyNamesAllowingExtra({ foo: true }), [])
+		pass()
+	},
+	"expectPropertyNamesAllowingExtra({foo: true, bar: true}, 'foo')": ({ pass }) => {
+		assertPassedWith(expectPropertyNamesAllowingExtra({ foo: true, bar: true }, "foo"), [undefined])
 		pass()
 	}
 })
