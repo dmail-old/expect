@@ -3,8 +3,12 @@ import { expectMatch, createMatcher, createExpectFromMatcherFactory } from "../e
 import { expectObject, expectFunction, prefix } from "../expectType/expectType.js"
 import { uneval } from "@dmail/uneval"
 
-const compareProperties = (actual, expected, { allowExtra = false, allowMissing = false } = {}) =>
-	any([expectObject(actual), expectFunction(actual)]).then(
+const compareProperties = (actual, expected, { allowExtra = false }) => {
+	if (actual === null || actual === undefined) {
+		return failed(`expect a function or an object to compare properties but got ${actual}`)
+	}
+
+	return any([expectObject(actual), expectFunction(actual)]).then(
 		() => {
 			const actualPropertyNames = Object.keys(actual)
 			const expectedPropertyNames = Object.keys(expected)
@@ -18,7 +22,7 @@ const compareProperties = (actual, expected, { allowExtra = false, allowMissing 
 							message => `${name} property mismatch: ${message}`
 						)
 					)
-				} else if (allowMissing === false) {
+				} else {
 					propertyExpectations.push(failed(`missing ${name} property`))
 				}
 			})
@@ -35,11 +39,12 @@ const compareProperties = (actual, expected, { allowExtra = false, allowMissing 
 		},
 		() =>
 			failed(
-				`expect a function or an object to compare properties but got a ${prefix(
+				`expect a function or an object to compare properties but got ${prefix(
 					typeof actual
-				)}: ${uneval(actual)} `
+				)}: ${uneval(actual)}`
 			)
 	)
+}
 
 // const mapObject = (object, fn) => {
 // 	const mappedObject = {}

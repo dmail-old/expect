@@ -1,1 +1,1 @@
-export * from "./src/expect.js"
+export * from "./src/index.js"

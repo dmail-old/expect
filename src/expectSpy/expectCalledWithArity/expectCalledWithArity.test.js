@@ -93,6 +93,13 @@ export default createTest({
 		)
 		pass()
 	},
+	"expecting 4 and called with 2": ({ pass }) => {
+		assertFailedWith(
+			expectCalledWithArity(createFakeTrackerCalledWithXArguments(2), 4),
+			"expect fake tracker to be called with 4 arguments but it was called with only two arguments"
+		)
+		pass()
+	},
 	"expecting 4 and called with 3": ({ pass }) => {
 		assertFailedWith(
 			expectCalledWithArity(createFakeTrackerCalledWithXArguments(3), 4),

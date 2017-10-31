@@ -19,6 +19,27 @@ const assertFailedWith = (action, value) => {
 }
 
 export default createTest({
+	"expectProperties(null)": ({ pass }) => {
+		assertFailedWith(
+			expectProperties(null, { foo: true }),
+			"expect a function or an object to compare properties but got null"
+		)
+		pass()
+	},
+	"expectProperties(undefined)": ({ pass }) => {
+		assertFailedWith(
+			expectProperties(undefined, { foo: true }),
+			"expect a function or an object to compare properties but got undefined"
+		)
+		pass()
+	},
+	"expectProperties(true)": ({ pass }) => {
+		assertFailedWith(
+			expectProperties(true, { foo: true }),
+			"expect a function or an object to compare properties but got a boolean: true"
+		)
+		pass()
+	},
 	"expectProperties({}, {foo: true})": ({ pass }) => {
 		assertFailedWith(expectProperties({}, { foo: true }), "missing foo property")
 		pass()
