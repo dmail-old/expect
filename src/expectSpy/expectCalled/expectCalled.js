@@ -1,9 +1,9 @@
-import { fromFunction } from "@dmail/action"
+import { failed, passed } from "@dmail/action"
 
-export const expectCalled = tracker =>
-	fromFunction(({ fail, pass }) => {
-		if (tracker.createReport().called === false) {
-			return fail(`expect ${tracker} to be called`)
-		}
-		return pass()
-	})
+export const expectCalled = tracker => {
+	const { called } = tracker.createReport()
+	if (called === false) {
+		return failed(`expect ${tracker} to be called`)
+	}
+	return passed()
+}

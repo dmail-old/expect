@@ -1,4 +1,4 @@
-import { fromFunction } from "@dmail/action"
+import { failed, passed } from "@dmail/action"
 
 export const createCalledExactlyFailedMessage = (spy, actual, expected) => {
 	let message
@@ -25,12 +25,11 @@ export const createCalledExactlyFailedMessage = (spy, actual, expected) => {
 
 	return message
 }
-export const expectCalledExactly = (spy, expectedCallCount) =>
-	fromFunction(({ pass, fail }) => {
-		const actualCallCount = spy.getCallCount()
-		if (actualCallCount !== expectedCallCount) {
-			return fail(createCalledExactlyFailedMessage(spy, actualCallCount, expectedCallCount))
-		}
-		return pass()
-	})
+export const expectCalledExactly = (spy, expectedCallCount) => {
+	const actualCallCount = spy.getCallCount()
+	if (actualCallCount !== expectedCallCount) {
+		return failed(createCalledExactlyFailedMessage(spy, actualCallCount, expectedCallCount))
+	}
+	return passed()
+}
 export const expectNotCalled = spy => expectCalledExactly(spy, 0)
