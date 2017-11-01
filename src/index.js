@@ -4,3 +4,4 @@
 export * from "./expectChain/expectChain.js"
 export * from "./expectMatch/index.js"
 export * from "./expectSpy/index.js"
+export * from "./expectThrowWith/expectThrowWith.js"
