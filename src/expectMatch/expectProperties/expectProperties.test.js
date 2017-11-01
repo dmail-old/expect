@@ -2,7 +2,8 @@ import {
 	expectProperties,
 	expectPropertiesAllowingExtra,
 	expectPropertyNames,
-	expectPropertyNamesAllowingExtra
+	expectPropertyNamesAllowingExtra,
+	expectPropertiesIncludingHidden
 } from "./expectProperties.js"
 import { createTest } from "@dmail/test"
 import { matchBelow } from "../expectBelow/expectBelow.js"
@@ -38,6 +39,15 @@ export default createTest({
 			expectProperties(true, { foo: true }),
 			"expect a function or an object to compare properties but got a boolean: true"
 		)
+		pass()
+	},
+	"expectProperties with extra non enumerable property": ({ pass }) => {
+		const actual = {}
+		Object.defineProperty(actual, "name", {
+			enumerable: false,
+			value: "foo"
+		})
+		assertPassedWith(expectProperties(actual, {}), [])
 		pass()
 	},
 	"expectProperties({}, {foo: true})": ({ pass }) => {
@@ -79,6 +89,15 @@ export default createTest({
 	},
 	"expectPropertyNamesAllowingExtra({foo: true, bar: true}, 'foo')": ({ pass }) => {
 		assertPassedWith(expectPropertyNamesAllowingExtra({ foo: true, bar: true }, "foo"), [undefined])
+		pass()
+	},
+	"expectPropertiesIncludingHidden()": ({ pass }) => {
+		const actual = {}
+		Object.defineProperty(actual, "name", {
+			value: "foo",
+			enumerable: false
+		})
+		assertFailedWith(expectPropertiesIncludingHidden(actual, {}), "unexpected name property")
 		pass()
 	}
 })

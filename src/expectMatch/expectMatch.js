@@ -5,27 +5,27 @@
 // expectCalledWith(spy, matchClose(10))
 // expectCalledWith(spy, matchBetween(5, 15))
 
-import { fromFunction } from "@dmail/action"
+import { failed, passed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 
 const matchSymbol = Symbol()
 
-export const expectMatch = (actual, expected) =>
-	fromFunction(({ fail, pass }) => {
-		if (expected !== null && expected !== undefined && expected.hasOwnProperty(matchSymbol)) {
-			return expected[matchSymbol](actual)
-		}
-		if (actual !== expected) {
-			return fail(`${uneval(actual)} does not match ${uneval(expected)}`)
-		}
-		return pass()
-	})
-
-export const createMatcher = fn => {
-	return {
-		[matchSymbol]: fn
+export const expectMatch = (actual, expected) => {
+	if (expected !== null && expected !== undefined && expected.hasOwnProperty(matchSymbol)) {
+		return expected[matchSymbol](actual)
 	}
+	if (actual !== expected) {
+		return failed(`${uneval(actual)} does not match ${uneval(expected)}`)
+	}
+	return passed()
 }
+
+export const createMatcher = fn => ({
+	[matchSymbol]: fn
+})
+
+export const matchAny = () => createMatcher(() => passed())
+
 export const createExpectFromMatcherFactory = matcherFactory => (actual, ...args) =>
 	expectMatch(actual, matcherFactory(...args))
 

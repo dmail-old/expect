@@ -55,5 +55,13 @@ export default createTest({
 	"expectString('')": ({ pass }) => {
 		assertPassedWith(expectString(""))
 		pass()
+	},
+	"expectString('foo', 'foo')": ({ pass }) => {
+		assertPassedWith(expectString("foo", "foo"))
+		pass()
+	},
+	"expectString('foo', 'bar')": ({ pass }) => {
+		assertFailedWith(expectString("foo", "bar"), `"foo" does not match "bar"`)
+		pass()
 	}
 })

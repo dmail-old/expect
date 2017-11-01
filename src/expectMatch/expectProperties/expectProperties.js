@@ -1,17 +1,28 @@
-import { failed, all, any, passed } from "@dmail/action"
-import { expectMatch, createMatcher, createExpectFromMatcherFactory } from "../expectMatch.js"
+import { failed, all, any } from "@dmail/action"
+import {
+	matchAny,
+	expectMatch,
+	createMatcher,
+	createExpectFromMatcherFactory
+} from "../expectMatch.js"
 import { expectObject, expectFunction, prefix } from "../expectType/expectType.js"
 import { uneval } from "@dmail/uneval"
 
-const compareProperties = (actual, expected, { allowExtra = false }) => {
+const compareProperties = (
+	actual,
+	expected,
+	{ allowExtra = false, extraMustBeEnumerable = true }
+) => {
 	if (actual === null || actual === undefined) {
 		return failed(`expect a function or an object to compare properties but got ${actual}`)
 	}
 
 	return any([expectObject(actual), expectFunction(actual)]).then(
 		() => {
-			const actualPropertyNames = Object.keys(actual)
-			const expectedPropertyNames = Object.keys(expected)
+			const listNames = Object.getOwnPropertyNames
+
+			const actualPropertyNames = listNames(actual)
+			const expectedPropertyNames = listNames(expected)
 			const propertyExpectations = []
 
 			expectedPropertyNames.forEach(name => {
@@ -30,7 +41,12 @@ const compareProperties = (actual, expected, { allowExtra = false }) => {
 			if (allowExtra === false) {
 				actualPropertyNames.forEach(name => {
 					if (expectedPropertyNames.includes(name) === false) {
-						propertyExpectations.push(failed(`unexpected ${name} property`))
+						if (
+							extraMustBeEnumerable === false ||
+							Object.getOwnPropertyDescriptor(actual, name).enumerable === true
+						) {
+							propertyExpectations.push(failed(`unexpected ${name} property`))
+						}
 					}
 				})
 			}
@@ -59,10 +75,11 @@ const fillObjectProperties = (object, names, value) => {
 	})
 	return object
 }
-const matchAny = () => createMatcher(() => passed())
 
 export const matchProperties = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: false }))
+export const matchPropertiesIncludingHidden = expected =>
+	createMatcher(actual => compareProperties(actual, expected, { extraMustBeEnumerable: false }))
 export const matchPropertiesAllowingExtra = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: true }))
 export const matchPropertyNames = (...expectedPropertyNames) =>
@@ -85,4 +102,7 @@ export const expectPropertiesAllowingExtra = createExpectFromMatcherFactory(
 export const expectPropertyNames = createExpectFromMatcherFactory(matchPropertyNames)
 export const expectPropertyNamesAllowingExtra = createExpectFromMatcherFactory(
 	matchPropertyNamesAllowingExtra
+)
+export const expectPropertiesIncludingHidden = createExpectFromMatcherFactory(
+	matchPropertiesIncludingHidden
 )
