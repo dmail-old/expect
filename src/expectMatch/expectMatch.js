@@ -9,9 +9,11 @@ import { failed, passed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 
 const matchSymbol = Symbol()
+const isMatcher = value =>
+	value !== null && value !== undefined && value.hasOwnProperty(matchSymbol)
 
 export const expectMatch = (actual, expected) => {
-	if (expected !== null && expected !== undefined && expected.hasOwnProperty(matchSymbol)) {
+	if (isMatcher(expected)) {
 		return expected[matchSymbol](actual)
 	}
 	if (actual !== expected) {
@@ -20,14 +22,29 @@ export const expectMatch = (actual, expected) => {
 	return passed()
 }
 
-export const createMatcher = fn => ({
-	[matchSymbol]: fn
-})
-
-export const matchAny = () => createMatcher(() => passed())
+export const createMatcher = fn => {
+	const matcher = {}
+	matcher[matchSymbol] = fn
+	Object.defineProperty(matcher, "constructor", {
+		enumerable: false,
+		/* istanbul ignore next */
+		value: function Matcher() {}
+	})
+	return matcher
+}
 
 export const createExpectFromMatcherFactory = matcherFactory => (actual, ...args) =>
 	expectMatch(actual, matcherFactory(...args))
+
+export const matchAny = () => createMatcher(() => passed())
+export const matchNot = expected =>
+	createMatcher(actual =>
+		expectMatch(actual, expected).then(
+			() => failed(`${uneval(actual)} matching ${uneval(expected)}`),
+			() => passed()
+		)
+	)
+export const expectNot = createExpectFromMatcherFactory(matchNot)
 
 export const expectTrue = actual => expectMatch(actual, true)
 export const expectFalse = actual => expectMatch(actual, false)

@@ -1,6 +1,6 @@
 {
 	"name": "@dmail/expect",
-	"version": "2.2.0",
+	"version": "2.3.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -21,7 +21,7 @@
 	"dependencies": {
 		"@dmail/action": "1.6.0",
 		"@dmail/spy": "0.0.2",
-		"@dmail/uneval": "0.0.1"
+		"@dmail/uneval": "1.0.0"
 	},
 	"devDependencies": {
 		"@dmail/command": "0.1.1",

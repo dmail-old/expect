@@ -5,12 +5,13 @@ import {
 	expectTrue,
 	expectFalse,
 	expectNull,
-	expectUndefined
+	expectUndefined,
+	expectNot
 } from "./expectMatch.js"
 import { createTest } from "@dmail/test"
 import assert from "assert"
 import { createSpy } from "@dmail/spy"
-import { failed } from "@dmail/action"
+import { failed, passed } from "@dmail/action"
 
 const assertPassedWith = (action, value) => {
 	assert.equal(action.getState(), "passed")
@@ -73,6 +74,19 @@ export default createTest({
 	},
 	"expectUndefined with null": ({ pass }) => {
 		assertFailedWith(expectUndefined(null), "null does not match undefined")
+		pass()
+	},
+	"expectNot(null, null)": ({ pass }) => {
+		assertFailedWith(expectNot(null, null), "null matching null")
+		pass()
+	},
+	"expectNot(null, undefined)": ({ pass }) => {
+		assertPassedWith(expectNot(null, undefined))
+		pass()
+	},
+	"expectNot(10, customMatcherPassing": ({ pass }) => {
+		const customMatcherPassing = createMatcher(() => passed("foo"))
+		assertFailedWith(expectNot(10, customMatcherPassing), `10 matching Matcher({})`)
 		pass()
 	}
 })
