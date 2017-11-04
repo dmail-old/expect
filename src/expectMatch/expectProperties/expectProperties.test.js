@@ -21,6 +21,10 @@ const assertFailedWith = (action, value) => {
 }
 
 export default createTest({
+	"expectProperties(() => {})": ({ pass }) => {
+		assertPassedWith(expectProperties(() => {}, () => {}), [])
+		pass()
+	},
 	"expectProperties(null)": ({ pass }) => {
 		assertFailedWith(
 			expectProperties(null, { foo: true }),

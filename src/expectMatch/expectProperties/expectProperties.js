@@ -20,7 +20,20 @@ const compareProperties = (
 
 	return any([expectObject(actual), expectFunction(actual)]).then(
 		() => {
-			const listNames = Object.getOwnPropertyNames
+			const listNames = value => {
+				const names = Object.getOwnPropertyNames(value)
+				if (typeof value === "function") {
+					return names.filter(
+						name =>
+							name !== "length" &&
+							name !== "name" &&
+							name !== "arguments" &&
+							name !== "caller" &&
+							name !== "prototype"
+					)
+				}
+				return names
+			}
 
 			const actualPropertyNames = listNames(actual)
 			const expectedPropertyNames = listNames(expected)
@@ -104,6 +117,8 @@ export const matchPropertiesDeep = expected =>
 				if (value === null || (typeof value !== "object" && typeof value !== "function")) {
 					return matchExactly(value)
 				}
+				// beware it can recurse indefinitely if the object structure is circular
+				// like function with .prototype.constructor cycling back on the function
 				return matchPropertiesDeep(value)
 			}
 		})
