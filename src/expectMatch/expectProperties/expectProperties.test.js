@@ -3,20 +3,21 @@ import {
 	expectPropertiesAllowingExtra,
 	expectPropertyNames,
 	expectPropertyNamesAllowingExtra,
-	expectPropertiesIncludingHidden
+	expectPropertiesIncludingHidden,
+	expectPropertiesDeep
 } from "./expectProperties.js"
 import { createTest } from "@dmail/test"
 import { matchBelow } from "../expectBelow/expectBelow.js"
 import assert from "assert"
 
 const assertPassedWith = (action, value) => {
-	assert.equal(action.getState(), "passed")
 	assert.deepEqual(action.getResult(), value)
+	assert.equal(action.getState(), "passed")
 }
 
 const assertFailedWith = (action, value) => {
-	assert.equal(action.getState(), "failed")
 	assert.deepEqual(action.getResult(), value)
+	assert.equal(action.getState(), "failed")
 }
 
 export default createTest({
@@ -98,6 +99,19 @@ export default createTest({
 			enumerable: false
 		})
 		assertFailedWith(expectPropertiesIncludingHidden(actual, {}), "unexpected name property")
+		pass()
+	},
+	"expectPropertiesDeep() with similar objects": ({ pass }) => {
+		assertPassedWith(expectPropertiesDeep({ user: { name: "dam" } }, { user: { name: "dam" } }), [
+			[undefined]
+		])
+		pass()
+	},
+	"expectPropertiesDeep() with unexpected deep value": ({ pass }) => {
+		assertFailedWith(
+			expectPropertiesDeep({ user: { name: "dam" } }, { user: { name: "seb" } }),
+			`user property mismatch: name property mismatch: "dam" does not match "seb"`
+		)
 		pass()
 	}
 })

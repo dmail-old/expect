@@ -1,6 +1,7 @@
 import { failed, all, any } from "@dmail/action"
 import {
 	matchAny,
+	matchExactly,
 	expectMatch,
 	createMatcher,
 	createExpectFromMatcherFactory
@@ -11,7 +12,7 @@ import { uneval } from "@dmail/uneval"
 const compareProperties = (
 	actual,
 	expected,
-	{ allowExtra = false, extraMustBeEnumerable = true }
+	{ allowExtra = false, extraMustBeEnumerable = true, propertyMatcher = matchExactly }
 ) => {
 	if (actual === null || actual === undefined) {
 		return failed(`expect a function or an object to compare properties but got ${actual}`)
@@ -28,7 +29,7 @@ const compareProperties = (
 			expectedPropertyNames.forEach(name => {
 				if (actualPropertyNames.includes(name)) {
 					propertyExpectations.push(
-						expectMatch(actual[name], expected[name]).then(
+						expectMatch(actual[name], propertyMatcher(expected[name])).then(
 							null,
 							message => `${name} property mismatch: ${message}`
 						)
@@ -95,14 +96,30 @@ export const matchPropertyNamesAllowingExtra = (...expectedPropertyNames) =>
 		})
 	)
 
+export const matchPropertiesDeep = expected =>
+	createMatcher(actual =>
+		compareProperties(actual, expected, {
+			allowExtra: false,
+			propertyMatcher: value => {
+				if (value === null || (typeof value !== "object" && typeof value !== "function")) {
+					return matchExactly(value)
+				}
+				return matchPropertiesDeep(value)
+			}
+		})
+	)
+
 export const expectProperties = createExpectFromMatcherFactory(matchProperties)
+export const expectPropertiesIncludingHidden = createExpectFromMatcherFactory(
+	matchPropertiesIncludingHidden
+)
 export const expectPropertiesAllowingExtra = createExpectFromMatcherFactory(
 	matchPropertiesAllowingExtra
 )
+
 export const expectPropertyNames = createExpectFromMatcherFactory(matchPropertyNames)
 export const expectPropertyNamesAllowingExtra = createExpectFromMatcherFactory(
 	matchPropertyNamesAllowingExtra
 )
-export const expectPropertiesIncludingHidden = createExpectFromMatcherFactory(
-	matchPropertiesIncludingHidden
-)
+
+export const expectPropertiesDeep = createExpectFromMatcherFactory(matchPropertiesDeep)

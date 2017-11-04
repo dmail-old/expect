@@ -11,8 +11,7 @@ import { uneval } from "@dmail/uneval"
 const matchSymbol = Symbol()
 const isMatcher = value =>
 	value !== null && value !== undefined && value.hasOwnProperty(matchSymbol)
-
-export const expectMatch = (actual, expected) => {
+const match = (actual, expected) => {
 	if (isMatcher(expected)) {
 		return expected[matchSymbol](actual)
 	}
@@ -21,6 +20,8 @@ export const expectMatch = (actual, expected) => {
 	}
 	return passed()
 }
+
+export const expectMatch = match
 
 export const createMatcher = fn => {
 	const matcher = {}
@@ -37,6 +38,7 @@ export const createExpectFromMatcherFactory = matcherFactory => (actual, ...args
 	expectMatch(actual, matcherFactory(...args))
 
 export const matchAny = () => createMatcher(() => passed())
+export const matchExactly = expected => createMatcher(actual => match(actual, expected))
 export const matchNot = expected =>
 	createMatcher(actual =>
 		expectMatch(actual, expected).then(
