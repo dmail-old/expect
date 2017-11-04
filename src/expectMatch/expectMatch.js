@@ -9,7 +9,7 @@ import { failed, passed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 
 const matchSymbol = Symbol()
-const isMatcher = value =>
+export const isMatcher = value =>
 	value !== null && value !== undefined && value.hasOwnProperty(matchSymbol)
 const match = (actual, expected) => {
 	if (isMatcher(expected)) {

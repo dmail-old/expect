@@ -117,5 +117,12 @@ export default createTest({
 			`user property mismatch: name property mismatch: "dam" does not match "seb"`
 		)
 		pass()
+	},
+	"expectPropertiesDeep() with matcher": ({ pass }) => {
+		assertFailedWith(
+			expectPropertiesDeep({ age: 10 }, { age: matchBelow(10) }),
+			`age property mismatch: expect a number below 10 but got 10`
+		)
+		pass()
 	}
 })

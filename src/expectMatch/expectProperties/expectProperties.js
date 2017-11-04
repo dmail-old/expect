@@ -1,5 +1,6 @@
 import { failed, all, any } from "@dmail/action"
 import {
+	isMatcher,
 	matchAny,
 	matchExactly,
 	expectMatch,
@@ -116,6 +117,9 @@ export const matchPropertiesDeep = expected =>
 			propertyMatcher: value => {
 				if (value === null || (typeof value !== "object" && typeof value !== "function")) {
 					return matchExactly(value)
+				}
+				if (isMatcher(value)) {
+					return value
 				}
 				// beware it can recurse indefinitely if the object structure is circular
 				// like function with .prototype.constructor cycling back on the function
