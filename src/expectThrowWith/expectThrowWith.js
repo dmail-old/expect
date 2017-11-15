@@ -1,7 +1,7 @@
 import { expectMatch } from "../expectMatch/expectMatch.js"
-import { failed } from "@dmail/action"
+import { failed, passed } from "@dmail/action"
 
-export const expectThrowWith = (fn, expectedException) => {
+export const expectThrow = fn => {
 	let throwed = false
 	let throwedValue
 
@@ -15,8 +15,13 @@ export const expectThrowWith = (fn, expectedException) => {
 	if (throwed === false) {
 		return failed("missing throw")
 	}
-	return expectMatch(throwedValue, expectedException).then(
-		null,
-		failureMessage => `throwed exception mismatch: ${failureMessage}`
-	)
+	return passed(throwedValue)
 }
+
+export const expectThrowWith = (fn, expectedException) =>
+	expectThrow(fn).then(throwedValue =>
+		expectMatch(throwedValue, expectedException).then(
+			null,
+			failureMessage => `throwed exception mismatch: ${failureMessage}`
+		)
+	)
