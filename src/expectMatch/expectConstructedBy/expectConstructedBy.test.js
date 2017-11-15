@@ -1,15 +1,17 @@
-import { expectError, expectTypeError } from "./expectConstructedBy.js"
+import { expectError, expectTypeError, expectErrorWith } from "./expectConstructedBy.js"
+import { createMatcher } from "../expectMatch.js"
 import { createTest } from "@dmail/test"
 import assert from "assert"
+import { failed } from "@dmail/action"
 
 const assertPassedWith = (action, value) => {
+	assert.deepEqual(action.getResult(), value)
 	assert.equal(action.getState(), "passed")
-	assert.equal(action.getResult(), value)
 }
 
 const assertFailedWith = (action, value) => {
+	assert.deepEqual(action.getResult(), value)
 	assert.equal(action.getState(), "failed")
-	assert.equal(action.getResult(), value)
 }
 
 export default createTest({
@@ -24,18 +26,33 @@ export default createTest({
 		)
 		pass()
 	},
-	"expectError matching": ({ pass }) => {
-		const error = new Error()
-		assertPassedWith(expectError(error, error))
-		pass()
-	},
-	"expectError not matching": ({ pass }) => {
-		const error = new Error()
-		assertFailedWith(expectError(error, null), `Error("") does not match null`)
-		pass()
-	},
 	"expectTypeError on new TypeError()": ({ pass }) => {
 		assertPassedWith(expectTypeError(new TypeError()))
+		pass()
+	},
+	"expectErrorWith() matching": ({ pass }) => {
+		const message = "foo"
+		assertPassedWith(
+			expectErrorWith(new Error(message), {
+				message
+			}),
+			[undefined]
+		)
+		pass()
+	},
+	"expectErrorWith() with custom matcher": ({ pass }) => {
+		const matcher = createMatcher(() => failed(10))
+		assertFailedWith(expectErrorWith(new Error(), matcher), "error mismatch: 10")
+		pass()
+	},
+	"expectErrorWith() not matching": ({ pass }) => {
+		const message = "foo"
+		assertFailedWith(
+			expectErrorWith(new Error(message), {
+				message: "bar"
+			}),
+			`error mismatch: message property mismatch: "foo" does not match "bar"`
+		)
 		pass()
 	}
 })
