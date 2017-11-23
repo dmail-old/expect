@@ -7,3 +7,5 @@ export const createIndexes = (to, from = 0) => {
 	}
 	return array
 }
+
+export const curry = (fn, ...curriedArgs) => (...args) => fn(...[...curriedArgs, ...args])

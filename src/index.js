@@ -2,8 +2,8 @@
 // https://github.com/jsenv/core/tree/959e76068b62c23d7047f6a8c7a3d6582ac25177/more/lib/instruction/assert
 
 export * from "./expectChain/expectChain.js"
-export * from "./expectMatch/index.js"
-export * from "./expectResolveWith/expectResolveWith.js"
-export * from "./expectRejectWith/expectRejectWith.js"
-export * from "./expectSpy/index.js"
-export * from "./expectThrowWith/expectThrowWith.js"
+export * from "./match/index.js"
+export * from "./expectReject/expectReject.js"
+export * from "./expectResolve/expectResolve.js"
+export * from "./expectThrow/expectThrow.js"
+export * from "./spy/index.js"

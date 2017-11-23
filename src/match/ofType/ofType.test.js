@@ -1,0 +1,67 @@
+import {
+	expectType,
+	expectAnyFunction,
+	expectAnyObject,
+	expectAnyNumber,
+	expectAnyString,
+	prefix,
+} from "./expectType.js"
+import { createTest } from "@dmail/test"
+import assert from "assert"
+
+const assertPassedWith = (action, value) => {
+	assert.equal(action.getState(), "passed")
+	assert.equal(action.getResult(), value)
+}
+
+const assertFailedWith = (action, value) => {
+	assert.equal(action.getState(), "failed")
+	assert.equal(action.getResult(), value)
+}
+
+export default createTest({
+	"prefix(null)": ({ pass }) => {
+		assert.equal(prefix("null"), "null")
+		pass()
+	},
+	"prefix(undefined)": ({ pass }) => {
+		assert.equal(prefix("undefined"), "undefined")
+		pass()
+	},
+	"expectType(10, 'string')": ({ pass }) => {
+		assertFailedWith(expectType(10, "string"), "expect a string but got a number")
+		pass()
+	},
+	"expectType('foo', 'string')": ({ pass }) => {
+		assertPassedWith(expectType("foo", "string"))
+		pass()
+	},
+	"expectFunction(true)": ({ pass }) => {
+		assertFailedWith(expectAnyFunction(true), "expect a function but got a boolean")
+		pass()
+	},
+	"expectFunction(() => {})": ({ pass }) => {
+		assertPassedWith(expectAnyFunction(() => {}))
+		pass()
+	},
+	"expectObject({})": ({ pass }) => {
+		assertPassedWith(expectAnyObject({}))
+		pass()
+	},
+	"expectNumber(10)": ({ pass }) => {
+		assertPassedWith(expectAnyNumber(10))
+		pass()
+	},
+	"expectString('')": ({ pass }) => {
+		assertPassedWith(expectAnyString(""))
+		pass()
+	},
+	"expectString('foo', 'foo')": ({ pass }) => {
+		assertPassedWith(expectAnyString("foo", "foo"))
+		pass()
+	},
+	"expectString('foo', 'bar')": ({ pass }) => {
+		assertFailedWith(expectAnyString("foo", "bar"), `"foo" does not match "bar"`)
+		pass()
+	},
+})
