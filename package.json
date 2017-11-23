@@ -26,9 +26,9 @@
 	"devDependencies": {
 		"@dmail/command": "0.1.1",
 		"@dmail/ensure": "0.0.2",
-		"@dmail/prettiest": "0.2.1",
-		"@dmail/shared-config": "1.1.1",
-		"@dmail/test": "2.2.0",
+		"@dmail/prettiest": "1.0.0",
+		"@dmail/shared-config": "2.1.0",
+		"@dmail/test": "2.2.1",
 		"babel-cli": "7.0.0-beta.0",
 		"babel-core": "7.0.0-beta.0",
 		"babel-eslint": "8.0.0",
@@ -37,7 +37,7 @@
 		"eslint": "3.19.0",
 		"eslint-plugin-import": "2.6.0",
 		"nyc": "11.2.1",
-		"prettier": "1.7.0",
+		"prettier": "1.8.2",
 		"rimraf": "2.6.2"
 	},
 	"scripts": {
