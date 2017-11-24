@@ -12,7 +12,17 @@ const getConstructorName = value => {
 	if (typeof value === "object" && "constructor" in value === false) {
 		return "Object"
 	}
-	return value.constructor.name
+	const { name } = value.constructor
+	if (name === "") {
+		if (typeof value === "object") {
+			return "Object"
+		}
+		if (typeof value === "function") {
+			return "Function"
+		}
+		return "Anonymous"
+	}
+	return name
 }
 
 export const prefix = type => {
@@ -21,9 +31,9 @@ export const prefix = type => {
 	}
 	const firstLetter = type[0].toLowerCase()
 	if (["a", "e", "i", "o", "u"].includes(firstLetter)) {
-		return `an ${type}`
+		return `an ${firstLetter + type.slice(1)}`
 	}
-	return `a ${type}`
+	return `a ${firstLetter + type.slice(1)}`
 }
 
 export const prefixValue = value => prefix(getConstructorName(value))

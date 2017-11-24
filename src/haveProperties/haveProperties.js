@@ -19,11 +19,26 @@ export const canHaveProperties = value => {
 	return typeof value === "object" || typeof value === "function"
 }
 
-const defaultCreatePropertyValueMatcher = (propertyValue, recurse) => {
+const defaultCreatePropertyValueMatcher = (propertyValue, propertyName, recurse) => {
 	if (canHaveProperties(propertyValue)) {
-		return () => recurse(propertyValue)
+		return recurse(propertyValue, propertyName)
 	}
 	return strictEqual(propertyValue)
+}
+
+const createPropertyMismatchFailureMessage = (path, propertyName, message) => {
+	if (message.includes(" mismatch:")) {
+		return message
+	}
+	return `${[...path, propertyName]} mismatch: ${message}`
+}
+
+const createPropertyMissingFailureMessage = (path, propertyName) => {
+	return `missing ${propertyName} property`
+}
+
+const createPropertyExtraFailureMessage = (path, propertyName) => {
+	return `unexpected ${propertyName} property`
 }
 
 const compareProperties = (
@@ -33,7 +48,9 @@ const compareProperties = (
 		allowExtra = false,
 		extraMustBeEnumerable = true,
 		createPropertyValueMatcher = defaultCreatePropertyValueMatcher,
-		seen,
+		expectedSeen,
+		actualSeen,
+		path,
 	},
 ) => {
 	if (actual === null || actual === undefined) {
@@ -42,27 +59,34 @@ const compareProperties = (
 
 	return any([matchAny(Object)(actual), matchAny(Function)(actual)]).then(
 		() => {
-			if (seen) {
-				if (seen.includes(expected)) {
+			if (actualSeen && actualSeen.includes(actual)) {
+				if (expectedSeen.includes(expected)) {
 					return passed()
 				}
-				seen.push(expected)
-			} else {
-				seen = [expected]
+				return failed(`unexpected circular reference`)
 			}
+			if (expectedSeen && expectedSeen.includes(expected)) {
+				if (actualSeen.includes(actual)) {
+					return passed()
+				}
+				return failed(`missing a circular reference`)
+			}
+
+			if (actualSeen) {
+				actualSeen.push(actual)
+			} else {
+				actualSeen = [actual]
+			}
+			if (expectedSeen) {
+				expectedSeen.push(expected)
+			} else {
+				expectedSeen = [expected]
+			}
+
+			path = path || []
 
 			const listNames = value => {
 				const names = Object.getOwnPropertyNames(value)
-				// if (typeof value === "function") {
-				// 	return names.filter(
-				// 		name =>
-				// 			name !== "length" &&
-				// 			name !== "name" &&
-				// 			name !== "arguments" &&
-				// 			name !== "caller" &&
-				// 			name !== "prototype",
-				// 	)
-				// }
 				return names
 			}
 
@@ -70,14 +94,20 @@ const compareProperties = (
 			const expectedPropertyNames = listNames(expected)
 			const propertyExpectations = []
 
-			const recurse = propertyValue => {
-				return compareProperties(propertyValue, {
+			// dans le cas où on recurse on voudrait pas modifier le message d'erreur
+			// autrement dit si la failure provient d'un matcher qui est nested
+			// on ne le préfixe pas
+			// sauf que la seule chose que j'ai c'est une string comme raison de la failure
+			// "value foo.bar mismatch: expect a number but got a boolean : true"
+			const recurse = (expectedPropertyValue, propertyName) => actualPropertyValue =>
+				compareProperties(actualPropertyValue, expectedPropertyValue, {
 					allowExtra,
 					extraMustBeEnumerable,
 					createPropertyValueMatcher,
-					seen,
+					expectedSeen,
+					actualSeen,
+					path: [...path, propertyName],
 				})
-			}
 
 			expectedPropertyNames.forEach(name => {
 				if (actualPropertyNames.includes(name)) {
@@ -86,16 +116,15 @@ const compareProperties = (
 					if (isMatcher(expectedPropertyValue)) {
 						propertyMatcher = expectedPropertyValue
 					} else {
-						propertyMatcher = createPropertyValueMatcher(expectedPropertyValue, recurse)
+						propertyMatcher = createPropertyValueMatcher(expectedPropertyValue, name, recurse)
 					}
 					propertyExpectations.push(
-						propertyMatcher()(actual[name]).then(
-							null,
-							message => `${name} property mismatch: ${message}`,
-						),
+						propertyMatcher(actual[name]).then(null, failure => {
+							return createPropertyMismatchFailureMessage(path, name, failure)
+						}),
 					)
 				} else {
-					propertyExpectations.push(failed(`missing ${name} property`))
+					propertyExpectations.push(failed(createPropertyMissingFailureMessage(path, name)))
 				}
 			})
 
@@ -106,7 +135,7 @@ const compareProperties = (
 							extraMustBeEnumerable === false ||
 							Object.getOwnPropertyDescriptor(actual, name).enumerable === true
 						) {
-							propertyExpectations.push(failed(`unexpected ${name} property`))
+							propertyExpectations.push(failed(createPropertyExtraFailureMessage(path, name)))
 						}
 					}
 				})
