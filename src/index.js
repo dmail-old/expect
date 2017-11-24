@@ -1,9 +1,20 @@
 // https://github.com/jsenv/core/blob/959e76068b62c23d7047f6a8c7a3d6582ac25177/more/lib/instruction/util/object-equals.js#L3
 // https://github.com/jsenv/core/tree/959e76068b62c23d7047f6a8c7a3d6582ac25177/more/lib/instruction/assert
 
-export * from "./expectChain/expectChain.js"
-export * from "./match/index.js"
+export * from "./any/any.js"
+export * from "./anyNumberAbove/anyNumberAbove.js"
+export * from "./anyNumberBelow/anyNumberBelow.js"
+export * from "./anyNumberBetween/anyNumberBetween.js"
+export * from "./anyNumberCloseTo/anyNumberCloseTo.js"
+export * from "./ensureCallSequence/ensureCallSequence.js"
+export * from "./every/every.js"
+export * from "./expectCallAtArguments/expectCallAtArguments.js"
+export * from "./expectCallCount/expectCallCount.js"
 export * from "./expectReject/expectReject.js"
 export * from "./expectResolve/expectResolve.js"
 export * from "./expectThrow/expectThrow.js"
-export * from "./spy/index.js"
+export * from "./haveProperties/haveProperties.js"
+export * from "./looseEqual/looseEqual.js"
+export * from "./not/not.js"
+export * from "./same/same.js"
+export * from "./strictEqual/strictEqual.js"
