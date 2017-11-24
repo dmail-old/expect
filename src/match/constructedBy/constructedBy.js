@@ -1,5 +1,9 @@
 import { createMatcher } from "../helper.js"
 import { failed, passed } from "@dmail/action"
+import {
+	matchHavingProperties,
+	matchHavingPropertiesAllowingExtra,
+} from "../havingProperties/havingProperties.js"
 
 const getConstructorName = value => {
 	if (value === null) {
@@ -43,6 +47,20 @@ const matchConstructor = expectedConstructorName =>
 	})
 
 export const matchConstructedBy = expectedConstructor => matchConstructor(expectedConstructor.name)
+
+export const matchConstructedByHaving = (expectedConstructor, expectedProperties) =>
+	createMatcher(actual =>
+		matchConstructedBy(expectedConstructor)(actual).then(() =>
+			matchHavingProperties(expectedProperties)(actual),
+		),
+	)
+
+export const matchConstructedByHavingAtLeast = (expectedConstructor, expectedProperties) =>
+	createMatcher(actual =>
+		matchConstructedBy(expectedConstructor)(actual).then(() =>
+			matchHavingPropertiesAllowingExtra(expectedProperties)(actual),
+		),
+	)
 
 export const matchConstructedByFromValue = expectedValue =>
 	matchConstructedBy(getConstructorName(expectedValue))

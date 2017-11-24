@@ -1,26 +1,10 @@
 import { isMatcher, createMatcher } from "../helper.js"
 import { failed, all, any } from "@dmail/action"
-import { matchAny } from "../any/any.js"
 import { matchAnyObject } from "../anyObject/anyObject.js"
 import { matchAnyFunction } from "../anyFunction/anyFunction.js"
 import { matchStrict } from "../strict/strict.js"
 import { prefixValue } from "../constructedBy/constructedBy.js"
 import { uneval } from "@dmail/uneval"
-
-// export const expectProperties = createExpectFromMatcherFactory(matchProperties)
-// export const expectPropertiesIncludingHidden = createExpectFromMatcherFactory(
-// 	matchPropertiesIncludingHidden
-// )
-// export const expectPropertiesAllowingExtra = createExpectFromMatcherFactory(
-// 	matchPropertiesAllowingExtra
-// )
-
-// export const expectPropertyNames = createExpectFromMatcherFactory(matchPropertyNames)
-// export const expectPropertyNamesAllowingExtra = createExpectFromMatcherFactory(
-// 	matchPropertyNamesAllowingExtra
-// )
-
-// export const expectPropertiesDeep = createExpectFromMatcherFactory(matchPropertiesDeep)
 
 // if you want to prevent the recursion behaviour on an object/function
 // you can specify a matcher for the value and it will just use the matcher
@@ -130,39 +114,11 @@ const compareProperties = (
 	)
 }
 
-// const mapObject = (object, fn) => {
-// 	const mappedObject = {}
-// 	Object.keys(object).forEach((name, index) => {
-// 		mappedObject[name] = fn(name, index, object[name], object)
-// 	})
-// 	return mappedObject
-// }
-const fillObjectProperties = (object, names, value) => {
-	names.forEach(name => {
-		object[name] = value
-	})
-	return object
-}
-
 export const matchHavingProperties = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: false }))
-
-export const matchHavingPropertiesIncludingHidden = expected =>
-	createMatcher(actual => compareProperties(actual, expected, { extraMustBeEnumerable: false }))
 
 export const matchHavingPropertiesAllowingExtra = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: true }))
 
-export const matchHavingPropertyNames = (...expectedPropertyNames) =>
-	createMatcher(actual =>
-		compareProperties(actual, fillObjectProperties({}, expectedPropertyNames, matchAny()), {
-			allowExtra: false,
-		}),
-	)
-
-export const matchHavingPropertyNamesAllowingExtra = (...expectedPropertyNames) =>
-	createMatcher(actual =>
-		compareProperties(actual, fillObjectProperties({}, expectedPropertyNames, matchAny()), {
-			allowExtra: true,
-		}),
-	)
+export const matchHavingPropertiesIncludingHidden = expected =>
+	createMatcher(actual => compareProperties(actual, expected, { extraMustBeEnumerable: false }))

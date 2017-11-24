@@ -20,7 +20,6 @@ export const match = expectedValue =>
 		if (expectedValue === actualValue) {
 			return passed()
 		}
-		// si expectedValue
 		return matchConstructedByFromValue(expectedValue).then(() => {
 			if (typeof expectedValue !== "object" && typeof expectedValue !== "function") {
 				return passed()
