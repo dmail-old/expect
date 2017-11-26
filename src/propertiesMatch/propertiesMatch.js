@@ -141,17 +141,17 @@ const compareProperties = (
 				})
 			}
 
-			return all(propertyExpectations)
+			return all(propertyExpectations).then(() => undefined)
 		},
 		() => failed(`cannot compare properties of ${prefixValue(actual)}: ${uneval(actual)}`),
 	)
 }
 
-export const haveProperties = expected =>
+export const propertiesMatch = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: false }))
 
-export const havePropertiesAllowingExtra = expected =>
+export const propertiesMatchAllowingExtra = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { allowExtra: true }))
 
-export const havePropertiesIncludingHidden = expected =>
+export const propertiesMatchIncludingHidden = expected =>
 	createMatcher(actual => compareProperties(actual, expected, { extraMustBeEnumerable: false }))

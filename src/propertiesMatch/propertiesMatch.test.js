@@ -1,8 +1,8 @@
 import {
-	haveProperties,
+	propertiesMatch,
 	// havePropertiesAllowingExtra,
 	// havePropertiesIncludingHidden,
-} from "./haveProperties.js"
+} from "./propertiesMatch.js"
 import { createTest } from "@dmail/test"
 // import { anyNumberBelow } from "../anyNumberBelow/anyNumberBelow.js"
 import assert from "assert"
@@ -18,40 +18,40 @@ const assertFailedWith = (action, value) => {
 }
 
 export default createTest({
-	"haveProperties({})({})": ({ pass }) => {
-		assertPassedWith(haveProperties({})({}), [])
+	"propertiesMatch({})({})": ({ pass }) => {
+		assertPassedWith(propertiesMatch({})({}), [])
 		pass()
 	},
-	"haveProperties({ foo: true })({ foo: true })": ({ pass }) => {
-		assertPassedWith(haveProperties({ foo: true })({ foo: true }), [undefined])
+	"propertiesMatch({ foo: true })({ foo: true })": ({ pass }) => {
+		assertPassedWith(propertiesMatch({ foo: true })({ foo: true }), [undefined])
 		pass()
 	},
-	"haveProperties on nested objects": ({ pass }) => {
-		assertPassedWith(haveProperties({ foo: { bar: true } })({ foo: { bar: true } }), [[undefined]])
+	"propertiesMatch on nested objects": ({ pass }) => {
+		assertPassedWith(propertiesMatch({ foo: { bar: true } })({ foo: { bar: true } }), [[undefined]])
 		pass()
 	},
-	"haveProperties on failing nested objects": ({ pass }) => {
+	"propertiesMatch on failing nested objects": ({ pass }) => {
 		assertFailedWith(
-			haveProperties({ foo: { bar: false } })({ foo: { bar: true } }),
+			propertiesMatch({ foo: { bar: false } })({ foo: { bar: true } }),
 			"foo,bar mismatch: expecting false but got true",
 		)
 		pass()
 	},
-	"haveProperties with extra nested property": ({ pass }) => {
+	"propertiesMatch with extra nested property": ({ pass }) => {
 		assertFailedWith(
-			haveProperties({ foo: {} })({ foo: { bar: true } }),
+			propertiesMatch({ foo: {} })({ foo: { bar: true } }),
 			"foo mismatch: unexpected bar property",
 		)
 		pass()
 	},
-	"haveProperties with missing nested property": ({ pass }) => {
+	"propertiesMatch with missing nested property": ({ pass }) => {
 		assertFailedWith(
-			haveProperties({ foo: { bar: true } })({ foo: {} }),
+			propertiesMatch({ foo: { bar: true } })({ foo: {} }),
 			"foo mismatch: missing bar property",
 		)
 		pass()
 	},
-	"haveProperties on matching nested circular structure": ({ pass }) => {
+	"propertiesMatch on matching nested circular structure": ({ pass }) => {
 		const object = {
 			foo: {
 				bar: true,
@@ -66,12 +66,12 @@ export default createTest({
 		sameObject.foo.parent = sameObject
 
 		assertFailedWith(
-			haveProperties(object)(sameObject),
+			propertiesMatch(object)(sameObject),
 			"foo,bar mismatch: expecting true but got false",
 		)
 		pass()
 	},
-	"haveProperties on missing nested circular structure": ({ pass }) => {
+	"propertiesMatch on missing nested circular structure": ({ pass }) => {
 		const object = {
 			foo: {
 				bar: true,
@@ -86,12 +86,12 @@ export default createTest({
 		}
 
 		assertFailedWith(
-			haveProperties(object)(sameObject),
+			propertiesMatch(object)(sameObject),
 			"foo,parent mismatch: missing a circular reference",
 		)
 		pass()
 	},
-	"haveProperties on unexpected nested circular structure": ({ pass }) => {
+	"propertiesMatch on unexpected nested circular structure": ({ pass }) => {
 		const object = {
 			foo: {
 				bar: true,
@@ -106,22 +106,22 @@ export default createTest({
 		sameObject.foo.parent = sameObject
 
 		assertFailedWith(
-			haveProperties(object)(sameObject),
+			propertiesMatch(object)(sameObject),
 			"foo,parent mismatch: unexpected circular reference",
 		)
 		pass()
 	},
-	"haveProperties on named arrow function": ({ pass }) => {
+	"propertiesMatch on named arrow function": ({ pass }) => {
 		const expectedArrow = () => {}
 		const actualArrow = () => {}
 		assertFailedWith(
-			haveProperties(expectedArrow)(actualArrow),
+			propertiesMatch(expectedArrow)(actualArrow),
 			`name mismatch: expecting "expectedArrow" but got "actualArrow"`,
 		)
 		pass()
 	},
-	"haveProperties on anonymous arrow function": ({ pass }) => {
-		assertPassedWith(haveProperties(() => {})(() => {}), [undefined, undefined, [undefined]])
+	"propertiesMatch on anonymous arrow function": ({ pass }) => {
+		assertPassedWith(propertiesMatch(() => {})(() => {}), [undefined, undefined, [undefined]])
 		pass()
 	},
 	/*

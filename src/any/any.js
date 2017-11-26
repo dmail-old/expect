@@ -1,4 +1,4 @@
-import { createMatcher } from "../match.js"
+import { createMatcher } from "../matcher.js"
 import { failed, passed } from "@dmail/action"
 
 const getConstructorName = value => {
@@ -49,7 +49,7 @@ export const matchConstructorName = expectedConstructorName =>
 				createFailedConstructorMessage(actualConstructorName, expectedConstructorName, value),
 			)
 		}
-		return passed()
+		return passed(value)
 	})
 
 export const matchConstructedBy = expectedConstructor =>

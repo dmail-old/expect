@@ -1,4 +1,4 @@
-import { createMatcher } from "../match.js"
+import { createMatcher } from "../matcher.js"
 import { failed } from "@dmail/action"
 import { any, prefixValue } from "../any/any.js"
 import { anyNumberAbove } from "../anyNumberAbove/anyNumberAbove.js"
