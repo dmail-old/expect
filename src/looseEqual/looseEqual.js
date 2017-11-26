@@ -1,12 +1,15 @@
-import { createMatcher } from "../match.js"
+import { createMatcher } from "../matcher.js"
 import { failed, passed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 
-export const looseEqual = expectedValue =>
-	createMatcher(actualValue => {
+const createLooseEqualFailureMessage = (actual, expected) =>
+	`expecting ${uneval(expected)} but got ${uneval(actual)}`
+
+export const looseEqual = expected =>
+	createMatcher(actual => {
 		// eslint-disable-next-line eqeqeq
-		if (actualValue != expectedValue) {
-			return failed(`expecting ${uneval(expectedValue)} but got ${uneval(actualValue)}`)
+		if (actual != expected) {
+			return failed(createLooseEqualFailureMessage(actual, expected))
 		}
 		return passed()
 	})

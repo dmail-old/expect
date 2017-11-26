@@ -1,12 +1,15 @@
-import { createMatcher } from "../match.js"
+import { createMatcher } from "../matcher.js"
 import { failed, passed } from "@dmail/action"
 import { prefix } from "../any/any.js"
 
-export const matchType = expectedType =>
-	createMatcher(value => {
-		const actualType = typeof value
-		if (actualType !== expectedType) {
-			return failed(`expect ${prefix(expectedType)} but got ${prefix(actualType)}`)
+const createOfTypeFailureMessage = (actual, expected, actualType) =>
+	`expect ${prefix(expected)} but got ${prefix(actualType)}`
+
+export const ofType = expected =>
+	createMatcher(actual => {
+		const actualType = typeof actual
+		if (actualType !== expected) {
+			return failed(createOfTypeFailureMessage(actual, expected, actualType))
 		}
 		return passed()
 	})

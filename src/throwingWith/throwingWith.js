@@ -1,14 +1,11 @@
-import {
-	label,
-	createMatcherFromGetter,
-	emptyParamSignature,
-	oneOrMoreParamSignature,
-} from "../matcher.js"
+import { label, createMatcher, matchAll } from "../matcher.js"
 import { any } from "../any/any.js"
 import { failed, passed } from "@dmail/action"
+import { oneOrMoreParamSignature } from "../helper.js"
 
-const getThrowedValue = fn => {
-	return any(Function)(fn).then(() => {
+const matchFunction = any(Function)
+const getValueThrowedByFunctionCall = fn => {
+	return matchFunction(fn).then(() => {
 		let throwed = false
 		let throwedValue
 
@@ -28,6 +25,10 @@ const getThrowedValue = fn => {
 
 export const throwingWith = () =>
 	oneOrMoreParamSignature({
-		fn: createMatcherFromGetter(getThrowedValue),
-		createMessage: `throwingWith() must be called with one or more argument, you can use throwingWith(any())`,
+		fn: (...args) =>
+			createMatcher(actual => {
+				return getValueThrowedByFunctionCall(actual).then(matchAll(...args))
+			}),
+		createMessage: () =>
+			`throwingWith() must be called with one or more argument, you can use throwingWith(any())`,
 	})

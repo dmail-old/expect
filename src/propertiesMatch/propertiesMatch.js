@@ -1,4 +1,4 @@
-import { isMatcher, createMatcher } from "../match.js"
+import { isMatcher, createMatcher } from "../matcher.js"
 import { passed, failed, all, any } from "@dmail/action"
 import { any as matchAny, prefixValue } from "../any/any.js"
 import { strictEqual } from "../strictEqual/strictEqual.js"

@@ -1,11 +1,14 @@
-import { createMatcher } from "../match.js"
+import { createMatcher } from "../matcher.js"
 import { failed, passed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 
-export const strictEqual = expectedValue =>
-	createMatcher(actualValue => {
-		if (actualValue !== expectedValue) {
-			return failed(`expecting ${uneval(expectedValue)} but got ${uneval(actualValue)}`)
+const createStrictEqualFailureMessage = (actual, expected) =>
+	`expecting ${uneval(expected)} but got ${uneval(actual)}`
+
+export const strictEqual = expected =>
+	createMatcher(actual => {
+		if (actual !== expected) {
+			return failed(createStrictEqualFailureMessage(actual, expected))
 		}
 		return passed()
 	})

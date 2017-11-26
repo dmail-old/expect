@@ -1,21 +1,29 @@
-import { createMatcher, createWithFromMatcher } from "../../expect.js"
-import { anyThenable } from "../anyThenable.js"
+import { label, createMatcher, matchAll } from "../matcher.js"
+import { anyThenable } from "../anyThenable/anyThenable.js"
 import { createAction } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
+import { oneOrMoreParamSignature } from "../helper.js"
 
-export const anyThenableResolving = () =>
-	createMatcher(actual => {
-		return anyThenable()(actual).then(() => {
-			const action = createAction()
+const matchThenable = anyThenable()
+const getValueResolvedByThenable = actual => {
+	return matchThenable(actual).then(() => {
+		const action = createAction()
 
-			actual.then(
-				// setTimeout to avoir promise catching error
-				value => setTimeout(() => action.pass(value)),
-				reason => action.fail(`thenable expected to resolve rejected with ${uneval(reason)}`),
-			)
+		actual.then(
+			// setTimeout to avoir promise catching error
+			value => setTimeout(() => action.pass(label(value, `value resolved by thenable`))),
+			value => action.fail(`thenable expected to resolve rejected with ${uneval(value)}`),
+		)
 
-			return action
-		})
+		return action
 	})
+}
 
-export const anyThenableResolvingWith = createWithFromMatcher(anyThenableResolving)
+export const resolvingWith = oneOrMoreParamSignature({
+	fn: (...args) =>
+		createMatcher(actual => {
+			return getValueResolvedByThenable(actual).then(matchAll(...args))
+		}),
+	createMessage: () =>
+		`resolvingWith must be called with one or more argument, you can use resolvingWith(any())`,
+})

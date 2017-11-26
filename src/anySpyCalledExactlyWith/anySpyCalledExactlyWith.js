@@ -1,7 +1,7 @@
-import { label, createMatcher, emptyParamSignature, matchAll } from "../matcher.js"
+import { label, createMatcher, matchAll } from "../matcher.js"
 import { anySpy } from "../anySpy/anySpy.js"
-import { createIndexes } from "../helper.js"
 import { strictEqual } from "../strictEqual/strictEqual.js"
+import { createIndexes, emptyParamSignature } from "../helper.js"
 
 const matchSpy = anySpy()
 const getSpyCallCount = actual => {
@@ -22,7 +22,7 @@ const getSpyExpectedCalls = (actual, expectedCallCount) => {
 
 export const anySpyNeverCalled = emptyParamSignature({
 	fn: () => createMatcher(actual => getSpyCallCount(actual).then(strictEqual(0))),
-	createMessage: `anySpyNeverCalled must be called without argument`,
+	createMessage: () => `anySpyNeverCalled must be called without argument`,
 })
 
 export const anySpyCalledExactlyWith = (expectedCallCount, ...args) =>

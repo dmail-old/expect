@@ -2,15 +2,22 @@ import { createMatcher } from "../matcher.js"
 import { failed, passed } from "@dmail/action"
 import { any, prefixValue } from "../any/any.js"
 
-export const anyNumberBelow = below =>
-	createMatcher(actual =>
-		any(Number)(actual).then(
+const createWrongTypeMessage = (actual, expected) =>
+	`expect a number below ${expected} but got ${prefixValue(actual)}: ${actual}`
+
+const createTooHighMessage = (actual, expected) =>
+	`expect a number below ${expected} but got ${actual}`
+
+const matchNumber = any(Number)
+export const anyNumberBelow = expected =>
+	createMatcher(actual => {
+		return matchNumber(actual).then(
 			() => {
-				if (actual >= below) {
-					return failed(`expect a number below ${below} but got ${actual}`)
+				if (actual >= expected) {
+					return failed(createTooHighMessage(actual, expected))
 				}
-				return passed()
+				return passed(actual)
 			},
-			() => failed(`expect a number below ${below} but got ${prefixValue(actual)}: ${actual}`),
-		),
-	)
+			() => createWrongTypeMessage(actual, expected),
+		)
+	})

@@ -5,5 +5,6 @@ export const expect = (...args) => {
 	if (args.length < 2) {
 		return failed(`expect must be called with at least 2 arguments (${args.length} given)`)
 	}
-	return matchAll(...args)
+	const [value, ...remainingArgs] = args
+	return matchAll(...remainingArgs)(value)
 }

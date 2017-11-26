@@ -1,29 +1,33 @@
-import { createMatcher } from "../match.js"
+import { createMatcher } from "../matcher.js"
 import { failed, passed } from "@dmail/action"
 import { matchConstructedByFromValue } from "../any/any.js"
-import { canHaveProperties, haveProperties } from "../haveProperties/haveProperties.js"
+import { canHaveProperties, propertiesMatch } from "../propertiesMatch/propertiesMatch.js"
+import { uneval } from "@dmail/uneval"
 
-export const same = expectedValue =>
-	createMatcher(actualValue => {
-		if (expectedValue === null) {
-			if (actualValue === null) {
+export const same = expected => {
+	const matchProperties = propertiesMatch(expected)
+
+	return createMatcher(actual => {
+		if (expected === null) {
+			if (actual === null) {
 				return passed()
 			}
-			return failed()
+			return failed(`expecting null but got ${uneval(actual)}`)
 		}
-		if (expectedValue === undefined) {
-			if (actualValue === undefined) {
+		if (expected === undefined) {
+			if (actual === undefined) {
 				return passed()
 			}
-			return failed()
+			return failed(`expecting undefined but got ${uneval(actual)}`)
 		}
-		if (expectedValue === actualValue) {
+		if (expected === actual) {
 			return passed()
 		}
-		return matchConstructedByFromValue(expectedValue).then(() => {
-			if (canHaveProperties(expectedValue)) {
-				return haveProperties(expectedValue)(actualValue)
+		return matchConstructedByFromValue(expected).then(() => {
+			if (canHaveProperties(expected)) {
+				return matchProperties(actual)
 			}
 			return passed()
 		})
 	})
+}

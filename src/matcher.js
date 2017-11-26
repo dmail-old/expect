@@ -1,5 +1,6 @@
 import { sequence } from "@dmail/action"
 import { same } from "./same/same.js"
+import { hasSymbol } from "./helper.js"
 
 const labelSymbol = Symbol()
 export const label = (value, labelName) => {
@@ -9,7 +10,7 @@ export const label = (value, labelName) => {
 	}
 }
 const getLabelNameAndValue = (value, previousLabelNames = []) => {
-	if (value && value.hasOwnProperty(labelSymbol)) {
+	if (hasSymbol(value, labelSymbol)) {
 		return getLabelNameAndValue(value.value, [...previousLabelNames, value[labelSymbol]])
 	}
 	return {
@@ -19,10 +20,9 @@ const getLabelNameAndValue = (value, previousLabelNames = []) => {
 }
 
 const matchSymbol = Symbol()
-export const isMatcher = value =>
-	value !== null && value !== undefined && value.hasOwnProperty(matchSymbol)
+export const isMatcher = value => hasSymbol(value, matchSymbol)
 
-const createMatcherFrom = value => {
+export const createMatcherFrom = value => {
 	if (isMatcher(value)) {
 		return value
 	}
@@ -54,23 +54,3 @@ export const composeMatcher = mapping =>
 			return createMatcherFrom(mapping[key])(actual[key])
 		})
 	})
-
-export const emptyParamSignature = ({
-	fn,
-	createMessage = `${fn} must be called without argument`,
-}) => (...args) => {
-	if (args.length > 0) {
-		throw new Error(createMessage())
-	}
-	return fn()
-}
-
-export const oneOrMoreParamSignature = ({
-	fn,
-	createMessage = `${fn} must be called with one argument or more`,
-}) => (...args) => {
-	if (args.length === 0) {
-		throw new Error(createMessage())
-	}
-	return fn()
-}
