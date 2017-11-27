@@ -9,7 +9,7 @@ const getSpyCallCount = actual => {
 }
 
 const getSpyExpectedCalls = (actual, expectedCallCount) => {
-	return matchSpy(actual).then(
+	return matchSpy(actual).then(() =>
 		label(
 			createIndexes(expectedCallCount).map(index => {
 				const tracker = actual.track(index)
@@ -21,18 +21,19 @@ const getSpyExpectedCalls = (actual, expectedCallCount) => {
 }
 
 export const anySpyNeverCalled = emptyParamSignature({
-	fn: () => createMatcher(actual => getSpyCallCount(actual).then(strictEqual(0))),
+	fn: () =>
+		createMatcher(actual => {
+			return getSpyCallCount(actual).then(strictEqual(0))
+		}),
 	createMessage: () => `anySpyNeverCalled must be called without argument`,
 })
 
-export const anySpyCalledExactlyWith = (expectedCallCount, ...args) =>
-	createMatcher(actual =>
-		getSpyCallCount(actual)
+export const anySpyCalledExactlyMatching = (expectedCallCount, ...args) =>
+	createMatcher(actual => {
+		return getSpyCallCount(actual)
 			.then(strictEqual(expectedCallCount))
 			.then(() => getSpyExpectedCalls(actual, 1))
-			.then(matchAll(...args)),
-	)
-
-export const anySpyCalledOnce = (...args) => anySpyCalledExactlyWith(1, ...args)
-
-export const anySpyCalledTwice = (...args) => anySpyCalledExactlyWith(2, ...args)
+			.then(matchAll(...args))
+	})
+export const anySpyCalledOnce = (...args) => anySpyCalledExactlyMatching(1, ...args)
+export const anySpyCalledTwice = (...args) => anySpyCalledExactlyMatching(2, ...args)

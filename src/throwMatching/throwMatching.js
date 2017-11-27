@@ -23,12 +23,12 @@ const getValueThrowedByFunctionCall = fn => {
 	})
 }
 
-export const throwingWith = () =>
+export const throwMatching = () =>
 	oneOrMoreParamSignature({
 		fn: (...args) =>
 			createMatcher(actual => {
 				return getValueThrowedByFunctionCall(actual).then(matchAll(...args))
 			}),
 		createMessage: () =>
-			`throwingWith() must be called with one or more argument, you can use throwingWith(any())`,
+			`throwMatching() must be called with one or more argument, you can use throwMatching(any())`,
 	})

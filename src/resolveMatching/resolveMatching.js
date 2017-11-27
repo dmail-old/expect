@@ -5,25 +5,25 @@ import { uneval } from "@dmail/uneval"
 import { oneOrMoreParamSignature } from "../helper.js"
 
 const matchThenable = anyThenable()
-const getValueRejectedByThenable = actual => {
+const getValueResolvedByThenable = actual => {
 	return matchThenable(actual).then(() => {
 		const action = createAction()
 
 		actual.then(
-			value => action.fail(`thenable expected to reject resolved with ${uneval(value)}`),
 			// setTimeout to avoir promise catching error
-			value => setTimeout(() => action.pass(label(value, `value rejected by thenable`))),
+			value => setTimeout(() => action.pass(label(value, `value resolved by thenable`))),
+			value => action.fail(`thenable expected to resolve rejected with ${uneval(value)}`),
 		)
 
 		return action
 	})
 }
 
-export const rejectingWith = oneOrMoreParamSignature({
+export const resolveMatching = oneOrMoreParamSignature({
 	fn: (...args) =>
 		createMatcher(actual => {
-			return getValueRejectedByThenable(actual).then(matchAll(...args))
+			return getValueResolvedByThenable(actual).then(matchAll(...args))
 		}),
 	createMessage: () =>
-		`rejectingWith must be called with one or more argument, you can use rejectingWith(any())`,
+		`resolveMatching must be called with one or more argument, you can use resolveMatching(any())`,
 })

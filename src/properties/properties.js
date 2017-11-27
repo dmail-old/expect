@@ -1,11 +1,11 @@
 import { isMatcher, createMatcher } from "../matcher.js"
-import { passed, failed, all, any } from "@dmail/action"
+import { passed, failed, sequence, chainActions, any } from "@dmail/action"
 import { any as matchAny, prefixValue } from "../any/any.js"
 import { strictEqual } from "../strictEqual/strictEqual.js"
 import { uneval } from "@dmail/uneval"
 
 // if you want to prevent the recursion behaviour on an object/function
-// you can specify a matcher for the value and it will just use the matcher
+// you can specify a matcher for the value and it will use the matcher
 /*
 {
 	array: strictEqual(array)
@@ -41,12 +41,17 @@ const createPropertyExtraFailureMessage = (path, propertyName) => {
 	return `unexpected ${propertyName} property`
 }
 
+const listNames = value => Object.getOwnPropertyNames(value)
+
+const propertyIsEnumerable = (object, name) =>
+	Object.getOwnPropertyDescriptor(object, name).enumerable
+
 const compareProperties = (
 	actual,
 	expected,
 	{
-		allowExtra = false,
-		extraMustBeEnumerable = true,
+		allowExtra,
+		extraMustBeEnumerable,
 		createPropertyValueMatcher = defaultCreatePropertyValueMatcher,
 		expectedSeen,
 		actualSeen,
@@ -85,14 +90,8 @@ const compareProperties = (
 
 			path = path || []
 
-			const listNames = value => {
-				const names = Object.getOwnPropertyNames(value)
-				return names
-			}
-
 			const actualPropertyNames = listNames(actual)
 			const expectedPropertyNames = listNames(expected)
-			const propertyExpectations = []
 
 			// dans le cas où on recurse on voudrait pas modifier le message d'erreur
 			// autrement dit si la failure provient d'un matcher qui est nested
@@ -109,49 +108,66 @@ const compareProperties = (
 					path: [...path, propertyName],
 				})
 
-			expectedPropertyNames.forEach(name => {
-				if (actualPropertyNames.includes(name)) {
-					const expectedPropertyValue = expected[name]
-					let propertyMatcher
-					if (isMatcher(expectedPropertyValue)) {
-						propertyMatcher = expectedPropertyValue
-					} else {
-						propertyMatcher = createPropertyValueMatcher(expectedPropertyValue, name, recurse)
-					}
-					propertyExpectations.push(
-						propertyMatcher(actual[name]).then(null, failure => {
-							return createPropertyMismatchFailureMessage(path, name, failure)
-						}),
-					)
-				} else {
-					propertyExpectations.push(failed(createPropertyMissingFailureMessage(path, name)))
-				}
-			})
-
-			if (allowExtra === false) {
-				actualPropertyNames.forEach(name => {
-					if (expectedPropertyNames.includes(name) === false) {
-						if (
-							extraMustBeEnumerable === false ||
-							Object.getOwnPropertyDescriptor(actual, name).enumerable === true
-						) {
-							propertyExpectations.push(failed(createPropertyExtraFailureMessage(path, name)))
+			return chainActions(
+				() => {
+					return sequence(expectedPropertyNames, name => {
+						if (actualPropertyNames.includes(name) === false) {
+							return failed(createPropertyMissingFailureMessage(path, name))
 						}
-					}
-				})
-			}
 
-			return all(propertyExpectations).then(() => undefined)
+						const expectedPropertyValue = expected[name]
+						let propertyMatcher
+						if (isMatcher(expectedPropertyValue)) {
+							propertyMatcher = expectedPropertyValue
+						} else {
+							propertyMatcher = createPropertyValueMatcher(expectedPropertyValue, name, recurse)
+						}
+
+						return propertyMatcher(actual[name]).then(null, failure => {
+							return createPropertyMismatchFailureMessage(path, name, failure)
+						})
+					})
+				},
+				() => {
+					if (allowExtra) {
+						return passed()
+					}
+					return sequence(actualPropertyNames, name => {
+						if (expectedPropertyNames.includes(name)) {
+							return passed()
+						}
+						if (extraMustBeEnumerable || propertyIsEnumerable(actual, name) === false) {
+							return passed()
+						}
+						return failed(createPropertyExtraFailureMessage(path, name))
+					})
+				},
+			).then(() => undefined)
 		},
 		() => failed(`cannot compare properties of ${prefixValue(actual)}: ${uneval(actual)}`),
 	)
 }
 
-export const propertiesMatch = expected =>
-	createMatcher(actual => compareProperties(actual, expected, { allowExtra: false }))
+export const propertiesMatching = expected =>
+	createMatcher(actual =>
+		compareProperties(actual, expected, {
+			allowExtra: true,
+			extraMustBeEnumerable: true, // not needed when allowExtra is true
+		}),
+	)
 
-export const propertiesMatchAllowingExtra = expected =>
-	createMatcher(actual => compareProperties(actual, expected, { allowExtra: true }))
+export const strictPropertiesMatching = expected =>
+	createMatcher(actual =>
+		compareProperties(actual, expected, {
+			allowExtra: false,
+			extraMustBeEnumerable: true,
+		}),
+	)
 
-export const propertiesMatchIncludingHidden = expected =>
-	createMatcher(actual => compareProperties(actual, expected, { extraMustBeEnumerable: false }))
+export const strictPropertiesMatchingIncludingHidden = expected =>
+	createMatcher(actual =>
+		compareProperties(actual, expected, {
+			allowExtra: false,
+			extraMustBeEnumerable: false,
+		}),
+	)

@@ -1,6 +1,6 @@
 import { label, createMatcher, matchAll, composeMatcher } from "../matcher.js"
 import { any } from "../any/any.js"
-import { propertiesMatchAllowingExtra } from "../propertiesMatch/propertiesMatch.js"
+import { propertiesMatching } from "../properties/properties.js"
 import { sequence, reduce } from "@dmail/action"
 import { anyNumberAbove } from "../anyNumberAbove/anyNumberAbove.js"
 import { createIndexes } from "../helper.js"
@@ -44,19 +44,27 @@ const getSpiesCallComingFromFunctionCall = (fn, spies) => {
 const getSpyCallComingFromFunctionCall = (fn, spy) =>
 	getSpiesCallComingFromFunctionCall(fn, [spy])[0]
 
-export const callingExactly = (spy, expectedCallCount, ...args) =>
+export const callSpyExactly = (spy, expectedCallCount, ...args) =>
 	createMatcher(actual => {
 		return getSpyCallComingFromFunctionCall(actual, spy).then(
-			matchAll(propertiesMatchAllowingExtra({ length: expectedCallCount }), composeMatcher(args)),
+			matchAll(propertiesMatching({ length: expectedCallCount }), composeMatcher(args)),
 		)
 	})
+export const callSpyOnce = (spy, ...args) => callSpyExactly(spy, 1, ...args)
+export const callSpyTwice = (spy, ...args) => callSpyExactly(spy, 2, ...args)
 
-export const callingOnce = (spy, ...args) => callingExactly(spy, 1, ...args)
-export const callingTwice = (spy, ...args) => callingExactly(spy, 2, ...args)
+export const callSpiesExactly = (spies, expectedCallCount, ...args) =>
+	createMatcher(actual => {
+		return getSpiesCallComingFromFunctionCall(actual, spies).then(
+			matchAll(propertiesMatching({ length: expectedCallCount }), composeMatcher(args)),
+		)
+	})
+export const callSpiesOnce = (spies, ...args) => callSpiesExactly(spies, 1, ...args)
+export const callSpiesTwice = (spies, ...args) => callSpiesExactly(spies, 2, ...args)
 
 const ensureSpiesCalledExactly = (spiesCalls, expectedCallCount) => {
 	return sequence(spiesCalls, spyCalls => {
-		return propertiesMatchAllowingExtra({ length: expectedCallCount })(spyCalls)
+		return propertiesMatching({ length: expectedCallCount })(spyCalls)
 	})
 }
 
@@ -72,7 +80,7 @@ const ensureSpiesRepeatSequence = (spiesCalls, expectedSpiesSequence, expectedSe
 	})
 }
 
-export const callingSequenceExactly = (spies, expectedSequenceCount, ...args) =>
+export const callSpiesSequenceExactly = (spies, expectedSequenceCount, ...args) =>
 	createMatcher(actual => {
 		return getSpiesCallComingFromFunctionCall(actual, spies).then(spiesCalls => {
 			return ensureSpiesCalledExactly(spiesCalls, expectedSequenceCount)
@@ -84,7 +92,9 @@ export const callingSequenceExactly = (spies, expectedSequenceCount, ...args) =>
 				})
 		})
 	})
-export const callingSequenceOnce = (spies, ...args) => callingSequenceExactly(spies, 1, ...args)
+export const callSpiesSequenceOnce = (spies, ...args) => callSpiesSequenceExactly(spies, 1, ...args)
+export const callSpiesSequenceTwice = (spies, ...args) =>
+	callSpiesSequenceExactly(spies, 2, ...args)
 
 /*
 callingSequenceOnce(
