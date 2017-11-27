@@ -1,11 +1,8 @@
-import {
-	propertiesMatch,
-	// havePropertiesAllowingExtra,
-	// havePropertiesIncludingHidden,
-} from "./propertiesMatch.js"
+import { propertiesMatching, strictPropertiesMatching } from "./properties.js"
 import { createTest } from "@dmail/test"
-// import { anyNumberBelow } from "../anyNumberBelow/anyNumberBelow.js"
 import assert from "assert"
+import { createMatcher } from "../matcher.js"
+import { passed } from "@dmail/action"
 
 const assertPassedWith = (action, value) => {
 	assert.deepEqual(action.getResult(), value)
@@ -17,172 +14,348 @@ const assertFailedWith = (action, value) => {
 	assert.equal(action.getState(), "failed")
 }
 
+const createMatchingEmptyObjects = () => {
+	return {
+		actual: {},
+		expected: {},
+	}
+}
+
+const createMatchingObjectWithProperty = () => {
+	return {
+		actual: { foo: true },
+		expected: { foo: true },
+	}
+}
+
+const createMatchingNestedObject = () => {
+	return {
+		actual: { foo: { bar: true } },
+		expected: { foo: { bar: true } },
+	}
+}
+
+const createMismatchingNestedObject = () => {
+	return {
+		expected: { foo: { bar: false } },
+		actual: { foo: { bar: true } },
+	}
+}
+
+const createNestedExtraProperty = () => {
+	return {
+		expected: { foo: {} },
+		actual: { foo: { bar: true } },
+	}
+}
+
+const createNestedExtraHiddenProperty = () => {
+	const expected = {
+		foo: {},
+	}
+	const actual = {
+		foo: {},
+	}
+	Object.defineProperty(actual.foo, "bar", {
+		enumerable: false,
+		value: true,
+	})
+	return {
+		expected,
+		actual,
+	}
+}
+
+const createNestedMissingHiddenProperty = () => {
+	const expected = {
+		foo: {},
+	}
+	Object.defineProperty(expected.foo, "bar", {
+		enumerable: false,
+		value: true,
+	})
+	const actual = {
+		foo: {},
+	}
+	return {
+		expected,
+		actual,
+	}
+}
+
+const createMisMatchingHiddenProperty = () => {
+	const expected = { foo: {} }
+	Object.defineProperty(expected.foo, "bar", {
+		enumerable: false,
+		value: true,
+	})
+	const actual = { foo: {} }
+	Object.defineProperty(actual.foo, "bar", {
+		enumerable: false,
+		value: false,
+	})
+	return { expected, actual }
+}
+
+const createNestedMissingProperty = () => {
+	return {
+		expected: { foo: { bar: true } },
+		actual: { foo: {} },
+	}
+}
+
+const createMissingNestedCircularStructure = () => {
+	const expected = {
+		foo: {
+			bar: false,
+		},
+	}
+	expected.foo.aaa = expected
+	const actual = {
+		foo: {
+			bar: false,
+		},
+	}
+	actual.foo.aaa = {}
+
+	return {
+		expected,
+		actual,
+	}
+}
+
+const createExtraNestedCircularStructure = () => {
+	const expected = {
+		foo: {
+			bar: true,
+		},
+	}
+	expected.foo.aaa = {}
+	const actual = {
+		foo: {
+			bar: true,
+		},
+	}
+	actual.foo.aaa = actual
+
+	return {
+		actual,
+		expected,
+	}
+}
+
+const createCircularStructureContainingMismatch = () => {
+	const actual = {
+		foo: {
+			bar: true,
+		},
+	}
+	actual.foo.aaa = actual
+	const expected = {
+		foo: {
+			bar: false,
+		},
+	}
+	expected.foo.aaa = expected
+	return {
+		actual,
+		expected,
+	}
+}
+
+const createTwoArrowFunctionsWithDifferentNames = () => {
+	return {
+		expected: () => {},
+		actual: () => {},
+	}
+}
+
+const assertSuccess = (matcher, factory) => {
+	const { actual, expected } = factory()
+	assertPassedWith(matcher(expected)(actual))
+}
+
+const assertFailure = (matcher, factory, expectedFailureMessage) => {
+	const { actual, expected } = factory()
+	assertFailedWith(matcher(expected)(actual), expectedFailureMessage)
+}
+
 export default createTest({
-	"propertiesMatch({})({})": ({ pass }) => {
-		assertPassedWith(propertiesMatch({})({}), [])
+	"propertiesMatching called without argument": ({ pass }) => {
+		assert.throws(
+			() => propertiesMatching(),
+			e => e.message === `propertiesMatching must be called with one argument, got 0`,
+		)
 		pass()
 	},
-	"propertiesMatch({ foo: true })({ foo: true })": ({ pass }) => {
-		assertPassedWith(propertiesMatch({ foo: true })({ foo: true }), [undefined])
+	"propertiesMatching called with 2 argument": ({ pass }) => {
+		assert.throws(
+			() => propertiesMatching(true, true),
+			e => e.message === `propertiesMatching must be called with one argument, got 2`,
+		)
 		pass()
 	},
-	"propertiesMatch on nested objects": ({ pass }) => {
-		assertPassedWith(propertiesMatch({ foo: { bar: true } })({ foo: { bar: true } }), [[undefined]])
+	"propertiesMatching called with null": ({ pass }) => {
+		assert.throws(
+			() => propertiesMatching(null),
+			e =>
+				e.message ===
+				`propertiesMatching expect first argument to be able to hold properties but was called with
+null
+You can use an object, array or function for instance`,
+		)
 		pass()
 	},
-	"propertiesMatch on failing nested objects": ({ pass }) => {
+	"propertiesMatching with actual being null": ({ pass }) => {
 		assertFailedWith(
-			propertiesMatch({ foo: { bar: false } })({ foo: { bar: true } }),
+			propertiesMatching({})(null),
+			"cannot compare properties of null: it has no properties",
+		)
+		pass()
+	},
+	"propertiesMatching with actual being undefined": ({ pass }) => {
+		assertFailedWith(
+			propertiesMatching({})(undefined),
+			"cannot compare properties of undefined: it has no properties",
+		)
+		pass()
+	},
+	"propertiesMatching with actual being true": ({ pass }) => {
+		assertFailedWith(propertiesMatching({})(true), "cannot compare properties of a boolean: true")
+		pass()
+	},
+	"propertiesMatching on empty objects": ({ pass }) => {
+		assertSuccess(propertiesMatching, createMatchingEmptyObjects)
+		pass()
+	},
+	"propertiesMatching on objects with matching properties ": ({ pass }) => {
+		assertSuccess(propertiesMatching, createMatchingObjectWithProperty)
+		pass()
+	},
+	"propertiesMatching on nested objects": ({ pass }) => {
+		assertSuccess(propertiesMatching, createMatchingNestedObject)
+		pass()
+	},
+	"propertiesMatching on mismatch nested objects": ({ pass }) => {
+		assertFailure(
+			propertiesMatching,
+			createMismatchingNestedObject,
 			"foo,bar mismatch: expecting false but got true",
 		)
 		pass()
 	},
-	"propertiesMatch with extra nested property": ({ pass }) => {
-		assertFailedWith(
-			propertiesMatch({ foo: {} })({ foo: { bar: true } }),
-			"foo mismatch: unexpected bar property",
-		)
+	"propertiesMatching on extra nested property": ({ pass }) => {
+		assertSuccess(propertiesMatching, createNestedExtraProperty)
 		pass()
 	},
-	"propertiesMatch with missing nested property": ({ pass }) => {
-		assertFailedWith(
-			propertiesMatch({ foo: { bar: true } })({ foo: {} }),
+	"propertiesMatching on missing nested property": ({ pass }) => {
+		assertFailure(
+			propertiesMatching,
+			createNestedMissingProperty,
 			"foo mismatch: missing bar property",
 		)
 		pass()
 	},
-	"propertiesMatch on matching nested circular structure": ({ pass }) => {
-		const object = {
-			foo: {
-				bar: true,
-			},
-		}
-		object.foo.parent = object
-		const sameObject = {
-			foo: {
-				bar: false,
-			},
-		}
-		sameObject.foo.parent = sameObject
-
-		assertFailedWith(
-			propertiesMatch(object)(sameObject),
+	"propertiesMatching on nested circular structure mismatch": ({ pass }) => {
+		assertFailure(
+			propertiesMatching,
+			createCircularStructureContainingMismatch,
+			"foo,bar mismatch: expecting false but got true",
+		)
+		pass()
+	},
+	"propertiesMatching on missing nested circular structure": ({ pass }) => {
+		assertFailure(
+			propertiesMatching,
+			createMissingNestedCircularStructure,
+			"foo,aaa mismatch: missing a circular reference",
+		)
+		pass()
+	},
+	"propertiesMatching on unexpected nested circular structure": ({ pass }) => {
+		assertSuccess(propertiesMatching, createExtraNestedCircularStructure)
+		pass()
+	},
+	"propertiesMatching on named arrow function": ({ pass }) => {
+		assertFailure(
+			propertiesMatching,
+			createTwoArrowFunctionsWithDifferentNames,
+			`name mismatch: expecting "expected" but got "actual"`,
+		)
+		pass()
+	},
+	"propertiesMatching on anonymous arrow function": ({ pass }) => {
+		assertPassedWith(propertiesMatching(() => {})(() => {}))
+		pass()
+	},
+	"propertiesMatching on extra hidden nested property": ({ pass }) => {
+		assertSuccess(propertiesMatching, createNestedExtraHiddenProperty)
+		pass()
+	},
+	"propertiesMatching on missing hidden property": ({ pass }) => {
+		assertFailure(
+			propertiesMatching,
+			createNestedMissingHiddenProperty,
+			"foo mismatch: missing bar property",
+		)
+		pass()
+	},
+	"propertiesMatching on mismatch on hidden nested property": ({ pass }) => {
+		assertFailure(
+			propertiesMatching,
+			createMisMatchingHiddenProperty,
 			"foo,bar mismatch: expecting true but got false",
 		)
 		pass()
 	},
-	"propertiesMatch on missing nested circular structure": ({ pass }) => {
-		const object = {
-			foo: {
-				bar: true,
-			},
+	"propertiesMatching with custom matcher": ({ pass }) => {
+		const expected = {
+			foo: createMatcher(() => passed()),
 		}
-		object.foo.parent = object
-		const sameObject = {
-			foo: {
-				bar: true,
-				parent: {},
-			},
+		const actual = {
+			foo: {},
 		}
-
-		assertFailedWith(
-			propertiesMatch(object)(sameObject),
-			"foo,parent mismatch: missing a circular reference",
+		assertPassedWith(propertiesMatching(expected)(actual))
+		pass()
+	},
+	"strictPropertiesMatching with extra nested property": ({ pass }) => {
+		assertFailure(
+			strictPropertiesMatching,
+			createNestedExtraProperty,
+			"foo mismatch: unexpected bar property",
 		)
 		pass()
 	},
-	"propertiesMatch on unexpected nested circular structure": ({ pass }) => {
-		const object = {
-			foo: {
-				bar: true,
-				parent: {},
-			},
-		}
-		const sameObject = {
-			foo: {
-				bar: true,
-			},
-		}
-		sameObject.foo.parent = sameObject
-
-		assertFailedWith(
-			propertiesMatch(object)(sameObject),
-			"foo,parent mismatch: unexpected circular reference",
+	"strictPropertiesMatching with missing nested property": ({ pass }) => {
+		assertFailure(
+			strictPropertiesMatching,
+			createNestedMissingProperty,
+			"foo mismatch: missing bar property",
 		)
 		pass()
 	},
-	"propertiesMatch on named arrow function": ({ pass }) => {
-		const expectedArrow = () => {}
-		const actualArrow = () => {}
-		assertFailedWith(
-			propertiesMatch(expectedArrow)(actualArrow),
-			`name mismatch: expecting "expectedArrow" but got "actualArrow"`,
+	"strictPropertiesMatching nested circular structure mismatch": ({ pass }) => {
+		assertFailure(
+			strictPropertiesMatching,
+			createCircularStructureContainingMismatch,
+			"foo,bar mismatch: expecting false but got true",
 		)
 		pass()
 	},
-	"propertiesMatch on anonymous arrow function": ({ pass }) => {
-		assertPassedWith(propertiesMatch(() => {})(() => {}), [undefined, undefined, [undefined]])
-		pass()
-	},
-	/*
-	"expectProperties(null)": ({ pass }) => {
-		assertFailedWith(
-			expectProperties(null, { foo: true }),
-			"expect a function or an object to compare properties but got null",
+	"strictPropertiesMatching on missing nested circular structure": ({ pass }) => {
+		assertFailure(
+			strictPropertiesMatching,
+			createMissingNestedCircularStructure,
+			"foo,aaa mismatch: missing a circular reference",
 		)
 		pass()
 	},
-	"expectProperties(undefined)": ({ pass }) => {
-		assertFailedWith(
-			expectProperties(undefined, { foo: true }),
-			"expect a function or an object to compare properties but got undefined",
+	"strictPropertiesMatching on unexpected nested circular structure": ({ pass }) => {
+		assertFailure(
+			strictPropertiesMatching,
+			createExtraNestedCircularStructure,
+			"foo,aaa mismatch: unexpected circular reference",
 		)
 		pass()
 	},
-	"expectProperties(true)": ({ pass }) => {
-		assertFailedWith(
-			expectProperties(true, { foo: true }),
-			"expect a function or an object to compare properties but got a boolean: true",
-		)
-		pass()
-	},
-	"expectProperties with extra non enumerable property": ({ pass }) => {
-		const actual = {}
-		Object.defineProperty(actual, "name", {
-			enumerable: false,
-			value: "foo",
-		})
-		assertPassedWith(expectProperties(actual, {}), [])
-		pass()
-	},
-	"expectProperties({}, {foo: true})": ({ pass }) => {
-		assertFailedWith(expectProperties({}, { foo: true }), "missing foo property")
-		pass()
-	},
-	"expectProperties({foo: true}, {foo: true})": ({ pass }) => {
-		assertPassedWith(expectProperties({ foo: true }, { foo: true }), [undefined])
-		pass()
-	},
-	"expectProperties({foo: true}, {})": ({ pass }) => {
-		assertFailedWith(expectProperties({ foo: true }, {}), "unexpected foo property")
-		pass()
-	},
-	"expectProperties({foo: 10}, {foo: matchBelow(5)}": ({ pass }) => {
-		assertFailedWith(
-			expectProperties({ foo: 10 }, { foo: matchBelow(5) }),
-			"foo property mismatch: expect a number below 5 but got 10",
-		)
-		pass()
-	},
-	"expectPropertiesAllowingExtra({foo: 10}, {})": ({ pass }) => {
-		assertPassedWith(expectPropertiesAllowingExtra({ foo: 10 }, {}), [])
-		pass()
-	},
-	"expectPropertiesAllowingExtra({foo: 10, bar: true}, {foo: 10})": ({ pass }) => {
-		assertPassedWith(expectPropertiesAllowingExtra({ foo: 10, bar: true }, { foo: 10 }), [
-			undefined,
-		])
-		pass()
-	},
-	*/
 })

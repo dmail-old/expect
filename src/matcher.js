@@ -29,8 +29,8 @@ export const createMatcherFrom = value => {
 	return same(value)
 }
 
-export const createMatcher = (fn, ...args) => {
-	const matcher = (...passedArgs) => fn(...args, ...passedArgs)
+export const createMatcher = fn => {
+	const matcher = actual => fn(actual)
 	matcher[matchSymbol] = true
 	Object.defineProperty(matcher, "constructor", {
 		enumerable: false,

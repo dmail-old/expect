@@ -1,5 +1,5 @@
 import { isMatcher, createMatcher } from "../matcher.js"
-import { passed, failed, sequence, chainActions, any } from "@dmail/action"
+import { passed, failed, sequence, chainFunctions, any } from "@dmail/action"
 import { any as matchAny, prefixValue } from "../any/any.js"
 import { strictEqual } from "../strictEqual/strictEqual.js"
 import { uneval } from "@dmail/uneval"
@@ -44,8 +44,10 @@ const createPropertyExtraFailureMessage = (path, propertyName) => {
 const listNames = value => Object.getOwnPropertyNames(value)
 
 const propertyIsEnumerable = (object, name) =>
-	Object.getOwnPropertyDescriptor(object, name).enumerable
+	Object.prototype.propertyIsEnumerable.call(object, name)
 
+const matchObject = matchAny(Object)
+const matchFunction = matchAny(Function)
 const compareProperties = (
 	actual,
 	expected,
@@ -56,16 +58,26 @@ const compareProperties = (
 		expectedSeen,
 		actualSeen,
 		path,
+		actualOwner,
 	},
 ) => {
 	if (actual === null || actual === undefined) {
 		return failed(`cannot compare properties of ${actual}: it has no properties`)
 	}
 
-	return any([matchAny(Object)(actual), matchAny(Function)(actual)]).then(
+	return any([matchObject(actual), matchFunction(actual)]).then(
 		() => {
 			if (actualSeen && actualSeen.includes(actual)) {
 				if (expectedSeen.includes(expected)) {
+					return passed()
+				}
+				if (allowExtra) {
+					return passed()
+				}
+				if (
+					extraMustBeEnumerable &&
+					propertyIsEnumerable(actualOwner, path[path.length - 1]) === false
+				) {
 					return passed()
 				}
 				return failed(`unexpected circular reference`)
@@ -93,11 +105,6 @@ const compareProperties = (
 			const actualPropertyNames = listNames(actual)
 			const expectedPropertyNames = listNames(expected)
 
-			// dans le cas où on recurse on voudrait pas modifier le message d'erreur
-			// autrement dit si la failure provient d'un matcher qui est nested
-			// on ne le préfixe pas
-			// sauf que la seule chose que j'ai c'est une string comme raison de la failure
-			// "value foo.bar mismatch: expect a number but got a boolean : true"
 			const recurse = (expectedPropertyValue, propertyName) => actualPropertyValue =>
 				compareProperties(actualPropertyValue, expectedPropertyValue, {
 					allowExtra,
@@ -106,9 +113,10 @@ const compareProperties = (
 					expectedSeen,
 					actualSeen,
 					path: [...path, propertyName],
+					actualOwner: actual,
 				})
 
-			return chainActions(
+			return chainFunctions(
 				() => {
 					return sequence(expectedPropertyNames, name => {
 						if (actualPropertyNames.includes(name) === false) {
@@ -136,7 +144,7 @@ const compareProperties = (
 						if (expectedPropertyNames.includes(name)) {
 							return passed()
 						}
-						if (extraMustBeEnumerable || propertyIsEnumerable(actual, name) === false) {
+						if (extraMustBeEnumerable && propertyIsEnumerable(actual, name) === false) {
 							return passed()
 						}
 						return failed(createPropertyExtraFailureMessage(path, name))
@@ -148,26 +156,42 @@ const compareProperties = (
 	)
 }
 
-export const propertiesMatching = expected =>
-	createMatcher(actual =>
-		compareProperties(actual, expected, {
-			allowExtra: true,
-			extraMustBeEnumerable: true, // not needed when allowExtra is true
-		}),
-	)
+const oneParamWhichCanHavePropertiesSignature = (fn, name) => (...args) => {
+	if (args.length !== 1) {
+		throw new Error(`${name} must be called with one argument, got ${args.length}`)
+	}
+	const [expected] = args
+	if (canHaveProperties(expected) === false) {
+		throw new TypeError(
+			`${name} expect first argument to be able to hold properties but was called with
+${uneval(expected)}
+You can use an object, array or function for instance`,
+		)
+	}
+	return fn(expected)
+}
 
-export const strictPropertiesMatching = expected =>
-	createMatcher(actual =>
-		compareProperties(actual, expected, {
-			allowExtra: false,
-			extraMustBeEnumerable: true,
-		}),
-	)
+export const propertiesMatching = oneParamWhichCanHavePropertiesSignature(
+	expected =>
+		createMatcher(actual =>
+			compareProperties(actual, expected, {
+				allowExtra: true,
+				extraMustBeEnumerable: true, // not needed when allowExtra is true
+			}),
+		),
+	"propertiesMatching",
+)
 
-export const strictPropertiesMatchingIncludingHidden = expected =>
-	createMatcher(actual =>
-		compareProperties(actual, expected, {
-			allowExtra: false,
-			extraMustBeEnumerable: false,
-		}),
-	)
+export const strictPropertiesMatching = oneParamWhichCanHavePropertiesSignature(
+	expected =>
+		createMatcher(actual =>
+			compareProperties(actual, expected, {
+				allowExtra: false,
+				extraMustBeEnumerable: true,
+			}),
+		),
+	"strictPropertiesMatching",
+)
+
+// add propertiesMatchingIncludingHidden
+// add strictPropertiesMatchingIncludingHidden
