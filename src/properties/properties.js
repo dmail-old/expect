@@ -19,26 +19,57 @@ export const canHaveProperties = value => {
 	return typeof value === "object" || typeof value === "function"
 }
 
-const defaultCreatePropertyValueMatcher = (propertyValue, propertyName, recurse) => {
-	if (canHaveProperties(propertyValue)) {
-		return recurse(propertyValue, propertyName)
+const defaultCreatePropertyValueMatcher = (propertyTrace, recurse) => {
+	const expectedPropertyValue = propertyTrace.getExpected()
+	if (canHaveProperties(expectedPropertyValue)) {
+		return recurse(propertyTrace)
 	}
-	return strictEqual(propertyValue)
+	return strictEqual(expectedPropertyValue)
 }
 
-const createPropertyMismatchFailureMessage = (path, propertyName, message) => {
-	if (message.includes(" mismatch:")) {
-		return message
+const getValueNameFromTrace = trace => {
+	const { getName, getParentTrace } = trace
+	const valueName = getName()
+	const parentTrace = getParentTrace()
+	if (parentTrace === null) {
+		// I want to improve failure message event more could improve log even more by transforming
+		// "expect 0 property on value to be an object"
+		// into
+		// "expect first argument on anonymous spy first call to be an object"
+		// thanks to this trace api and maybe a bit more work I'll be able to do that
+		// I must first end the other apis, especially the ones around spy
+		// to see more clearly how we can transform "expect 0 property" into "expect first argument"
+		return valueName
 	}
-	return `${[...path, propertyName]} mismatch: ${message}`
+	return `${getValueNameFromTrace(parentTrace)} ${valueName}`
 }
 
-const createPropertyMissingFailureMessage = (path, propertyName) => {
-	return `missing ${propertyName} property`
-}
-
-const createPropertyExtraFailureMessage = (path, propertyName) => {
-	return `unexpected ${propertyName} property`
+const createPropertiesFailureMessage = ({ type, trace, data }) => {
+	if (type === "extra-recursion") {
+		return `expect ${trace.getName()} property on ${getValueNameFromTrace(
+			trace.getParentTrace(),
+		)} to be ${prefixValue(trace.getExpected())} but got a circular reference`
+	}
+	if (type === "missing-recursion") {
+		return `expect ${trace.getName()} property on ${getValueNameFromTrace(
+			trace.getParentTrace(),
+		)} to be a circular reference but got ${prefixValue(trace.getActual())}`
+	}
+	if (type === "extra") {
+		return `unexpected ${trace.getName()} property on ${getValueNameFromTrace(
+			trace.getParentTrace(),
+		)}`
+	}
+	if (type === "missing") {
+		return `expect ${trace.getName()} property on ${getValueNameFromTrace(
+			trace.getParentTrace(),
+		)} but missing`
+	}
+	if (type === "mismatch") {
+		return `${trace.getName()} property mismatch on ${getValueNameFromTrace(
+			trace.getParentTrace(),
+		)}: ${data}`
+	}
 }
 
 const listNames = value => Object.getOwnPropertyNames(value)
@@ -57,8 +88,7 @@ const compareProperties = (
 		createPropertyValueMatcher = defaultCreatePropertyValueMatcher,
 		expectedSeen,
 		actualSeen,
-		path,
-		actualOwner,
+		trace,
 	},
 ) => {
 	if (actual === null || actual === undefined) {
@@ -67,72 +97,113 @@ const compareProperties = (
 
 	return any([matchObject(actual), matchFunction(actual)]).then(
 		() => {
-			if (actualSeen && actualSeen.includes(actual)) {
-				if (expectedSeen.includes(expected)) {
-					return passed()
+			if (trace === undefined) {
+				trace = {
+					getDepth: () => 0,
+					getName: () => "value",
+					getExpected: () => expected,
+					getActual: () => actual,
+					getParentTrace: () => null,
 				}
-				if (allowExtra) {
-					return passed()
-				}
-				if (
-					extraMustBeEnumerable &&
-					propertyIsEnumerable(actualOwner, path[path.length - 1]) === false
-				) {
-					return passed()
-				}
-				return failed(`unexpected circular reference`)
-			}
-			if (expectedSeen && expectedSeen.includes(expected)) {
-				if (actualSeen.includes(actual)) {
-					return passed()
-				}
-				return failed(`missing a circular reference`)
 			}
 
-			if (actualSeen) {
-				actualSeen.push(actual)
-			} else {
+			const depth = trace.getDepth()
+
+			if (depth === 0) {
 				actualSeen = [actual]
-			}
-			if (expectedSeen) {
-				expectedSeen.push(expected)
-			} else {
 				expectedSeen = [expected]
-			}
+			} else {
+				if (actualSeen.includes(actual)) {
+					if (expectedSeen.includes(expected)) {
+						return passed()
+					}
+					if (allowExtra) {
+						return passed()
+					}
+					if (
+						extraMustBeEnumerable &&
+						propertyIsEnumerable(trace.getParentTrace().getActual(), trace.getName()) === false
+					) {
+						return passed()
+					}
+					return failed({
+						type: "extra-recursion",
+						trace,
+					})
+				}
+				if (expectedSeen.includes(expected)) {
+					if (actualSeen.includes(actual)) {
+						return passed()
+					}
+					return failed({
+						type: "missing-recursion",
+						trace,
+					})
+				}
 
-			path = path || []
+				actualSeen.push(actual)
+				expectedSeen.push(expected)
+			}
 
 			const actualPropertyNames = listNames(actual)
 			const expectedPropertyNames = listNames(expected)
 
-			const recurse = (expectedPropertyValue, propertyName) => actualPropertyValue =>
-				compareProperties(actualPropertyValue, expectedPropertyValue, {
+			const createTraceForProperty = name => {
+				const getDepth = () => depth + 1
+				const getName = () => name
+				const getExpected = () => expected[name]
+				const getActual = () => actual[name]
+				const getParentTrace = () => trace
+
+				return {
+					getDepth,
+					getName,
+					getExpected,
+					getActual,
+					getParentTrace,
+				}
+			}
+			const recurse = propertyTrace => () => {
+				return compareProperties(propertyTrace.getActual(), propertyTrace.getExpected(), {
 					allowExtra,
 					extraMustBeEnumerable,
 					createPropertyValueMatcher,
 					expectedSeen,
 					actualSeen,
-					path: [...path, propertyName],
-					actualOwner: actual,
+					trace: propertyTrace,
 				})
+			}
 
 			return chainFunctions(
 				() => {
 					return sequence(expectedPropertyNames, name => {
+						const propertyTrace = createTraceForProperty(name)
+
 						if (actualPropertyNames.includes(name) === false) {
-							return failed(createPropertyMissingFailureMessage(path, name))
+							return failed({
+								type: "missing",
+								trace: propertyTrace,
+							})
 						}
 
-						const expectedPropertyValue = expected[name]
+						const expectedPropertyValue = propertyTrace.getExpected()
+
 						let propertyMatcher
 						if (isMatcher(expectedPropertyValue)) {
 							propertyMatcher = expectedPropertyValue
 						} else {
-							propertyMatcher = createPropertyValueMatcher(expectedPropertyValue, name, recurse)
+							propertyMatcher = createPropertyValueMatcher(propertyTrace, recurse)
 						}
 
-						return propertyMatcher(actual[name]).then(null, failure => {
-							return createPropertyMismatchFailureMessage(path, name, failure)
+						return propertyMatcher(propertyTrace.getActual()).then(null, failure => {
+							if (typeof failure === "string") {
+								return {
+									type: "mismatch",
+									data: failure,
+									trace: propertyTrace,
+								}
+							}
+							return failure
 						})
 					})
 				},
@@ -147,10 +218,22 @@ const compareProperties = (
 						if (extraMustBeEnumerable && propertyIsEnumerable(actual, name) === false) {
 							return passed()
 						}
-						return failed(createPropertyExtraFailureMessage(path, name))
+						const propertyTrace = createTraceForProperty(name)
+						return failed({
+							type: "extra",
+							trace: propertyTrace,
+						})
 					})
 				},
-			).then(() => undefined)
+			).then(
+				() => undefined,
+				failure => {
+					if (depth === 0) {
+						return createPropertiesFailureMessage(failure)
+					}
+					return failure
+				},
+			)
 		},
 		() => failed(`cannot compare properties of ${prefixValue(actual)}: ${uneval(actual)}`),
 	)

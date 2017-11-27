@@ -240,7 +240,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			propertiesMatching,
 			createMismatchingNestedObject,
-			"foo,bar mismatch: expecting false but got true",
+			"bar property mismatch on value foo: expecting false but got true",
 		)
 		pass()
 	},
@@ -252,7 +252,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			propertiesMatching,
 			createNestedMissingProperty,
-			"foo mismatch: missing bar property",
+			"expect bar property on value foo but missing",
 		)
 		pass()
 	},
@@ -260,7 +260,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			propertiesMatching,
 			createCircularStructureContainingMismatch,
-			"foo,bar mismatch: expecting false but got true",
+			"bar property mismatch on value foo: expecting false but got true",
 		)
 		pass()
 	},
@@ -268,7 +268,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			propertiesMatching,
 			createMissingNestedCircularStructure,
-			"foo,aaa mismatch: missing a circular reference",
+			"expect aaa property on value foo to be a circular reference but got an object",
 		)
 		pass()
 	},
@@ -280,7 +280,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			propertiesMatching,
 			createTwoArrowFunctionsWithDifferentNames,
-			`name mismatch: expecting "expected" but got "actual"`,
+			`name property mismatch on value: expecting "expected" but got "actual"`,
 		)
 		pass()
 	},
@@ -296,7 +296,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			propertiesMatching,
 			createNestedMissingHiddenProperty,
-			"foo mismatch: missing bar property",
+			"expect bar property on value foo but missing",
 		)
 		pass()
 	},
@@ -304,7 +304,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			propertiesMatching,
 			createMisMatchingHiddenProperty,
-			"foo,bar mismatch: expecting true but got false",
+			"bar property mismatch on value foo: expecting true but got false",
 		)
 		pass()
 	},
@@ -322,7 +322,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			strictPropertiesMatching,
 			createNestedExtraProperty,
-			"foo mismatch: unexpected bar property",
+			"unexpected bar property on value foo",
 		)
 		pass()
 	},
@@ -330,7 +330,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			strictPropertiesMatching,
 			createNestedMissingProperty,
-			"foo mismatch: missing bar property",
+			"expect bar property on value foo but missing",
 		)
 		pass()
 	},
@@ -338,7 +338,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			strictPropertiesMatching,
 			createCircularStructureContainingMismatch,
-			"foo,bar mismatch: expecting false but got true",
+			"bar property mismatch on value foo: expecting false but got true",
 		)
 		pass()
 	},
@@ -346,7 +346,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			strictPropertiesMatching,
 			createMissingNestedCircularStructure,
-			"foo,aaa mismatch: missing a circular reference",
+			"expect aaa property on value foo to be a circular reference but got an object",
 		)
 		pass()
 	},
@@ -354,7 +354,7 @@ You can use an object, array or function for instance`,
 		assertFailure(
 			strictPropertiesMatching,
 			createExtraNestedCircularStructure,
-			"foo,aaa mismatch: unexpected circular reference",
+			`expect aaa property on value foo to be an object but got a circular reference`,
 		)
 		pass()
 	},
