@@ -33,12 +33,12 @@ const getValueNameFromTrace = trace => {
 	const parentTrace = getParentTrace()
 	if (parentTrace === null) {
 		// I want to improve failure message event more could improve log even more by transforming
-		// "expect 0 property on value to be an object"
+		// "expect value 0 to be an object"
 		// into
-		// "expect first argument on anonymous spy first call to be an object"
+		// "expect anonymous spy first call first argument to be an object"
 		// thanks to this trace api and maybe a bit more work I'll be able to do that
 		// I must first end the other apis, especially the ones around spy
-		// to see more clearly how we can transform "expect 0 property" into "expect first argument"
+		// to see more clearly how we can transform "0" into "first argument"
 		return valueName
 	}
 	return `${getValueNameFromTrace(parentTrace)} ${valueName}`
@@ -46,14 +46,14 @@ const getValueNameFromTrace = trace => {
 
 const createPropertiesFailureMessage = ({ type, trace, data }) => {
 	if (type === "extra-recursion") {
-		return `expect ${trace.getName()} property on ${getValueNameFromTrace(
-			trace.getParentTrace(),
-		)} to be ${prefixValue(trace.getExpected())} but got a circular reference`
+		return `expect ${getValueNameFromTrace(trace)} to be ${prefixValue(
+			trace.getExpected(),
+		)} but got a circular reference`
 	}
 	if (type === "missing-recursion") {
-		return `expect ${trace.getName()} property on ${getValueNameFromTrace(
-			trace.getParentTrace(),
-		)} to be a circular reference but got ${prefixValue(trace.getActual())}`
+		return `expect ${getValueNameFromTrace(trace)} to be a circular reference but got ${prefixValue(
+			trace.getActual(),
+		)}`
 	}
 	if (type === "extra") {
 		return `unexpected ${trace.getName()} property on ${getValueNameFromTrace(
@@ -66,9 +66,7 @@ const createPropertiesFailureMessage = ({ type, trace, data }) => {
 		)} but missing`
 	}
 	if (type === "mismatch") {
-		return `${trace.getName()} property mismatch on ${getValueNameFromTrace(
-			trace.getParentTrace(),
-		)}: ${data}`
+		return `${getValueNameFromTrace(trace)} mismatch: ${data}`
 	}
 }
 
@@ -246,7 +244,7 @@ const oneParamWhichCanHavePropertiesSignature = (fn, name) => (...args) => {
 	const [expected] = args
 	if (canHaveProperties(expected) === false) {
 		throw new TypeError(
-			`${name} expect first argument to be able to hold properties but was called with
+			`${name} first argument must be able to hold properties but it was called with
 ${uneval(expected)}
 You can use an object, array or function for instance`,
 		)
