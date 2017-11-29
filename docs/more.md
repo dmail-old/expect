@@ -31,8 +31,8 @@ More matchers
 * decimalLengthMatching(...matchers) Not even sure it makes sense but it would read decimal count
 	from 0.001 and returns 3 and apply matchers on this value
 * pattern(regexp) Expects String(actual) to match the regexp
-* partCountMatching(substring, ...matchers) Count how many times substring is present in actual and
+* occurenceCountMatching(substring, ...matchers) Count how many times substring is present in actual and
 	apply matchers on it
-* anyStringContaining(substring) helper around partCountMatching(substring, anyNumberAbove(0))
+* anyStringContaining(substring) helper around occurenceCountMatching(substring, anyNumberAbove(0))
 * anyStringStartingWith(substring)
 * anyStringEndingWith(substring)
