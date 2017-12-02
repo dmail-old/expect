@@ -1,11 +1,12 @@
 import { createMatcher } from "../matcher.js"
 import { failed, passed } from "@dmail/action"
 import { matchConstructedByFromValue } from "../any/any.js"
-import { canHaveProperties, propertiesMatching } from "../properties/properties.js"
+import { propertiesMatch } from "../properties/properties.js"
 import { uneval } from "@dmail/uneval"
+import { canHaveProperty } from "../helper.js"
 
 export const same = expected => {
-	const matchProperties = propertiesMatching(expected)
+	const matchProperties = propertiesMatch(expected)
 
 	return createMatcher(actual => {
 		if (expected === null) {
@@ -24,7 +25,7 @@ export const same = expected => {
 			return passed()
 		}
 		return matchConstructedByFromValue(expected).then(() => {
-			if (canHaveProperties(expected)) {
+			if (canHaveProperty(expected)) {
 				return matchProperties(actual)
 			}
 			return passed()

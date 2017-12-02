@@ -1,8 +1,8 @@
 import { createMatcher } from "../matcher.js"
 import { any } from "../any/any.js"
-import { propertiesMatchAllowingExtra } from "../propertiesMatch/propertiesMatch.js"
+import { propertiesMatch } from "../properties/properties.js"
 
-const mustHaveAThenMethod = propertiesMatchAllowingExtra({
+const mustHaveAThenMethod = propertiesMatch({
 	then: any(Function),
 })
 

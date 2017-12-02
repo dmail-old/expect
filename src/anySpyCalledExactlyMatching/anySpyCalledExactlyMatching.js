@@ -1,7 +1,7 @@
-import { label, createMatcher, matchAll } from "../matcher.js"
+import { label, createMatcher } from "../matcher.js"
 import { anySpy } from "../anySpy/anySpy.js"
-import { strictEqual } from "../strictEqual/strictEqual.js"
-import { createIndexes, emptyParamSignature } from "../helper.js"
+import { exactly } from "../exactly/exactly.js"
+import { createIndexes, withoutArgumentSignature } from "../helper.js"
 
 const matchSpy = anySpy()
 const getSpyCallCount = actual => {
@@ -20,7 +20,7 @@ const getSpyExpectedCalls = (actual, expectedCallCount) => {
 	)
 }
 
-export const anySpyNeverCalled = emptyParamSignature({
+export const anySpyNeverCalled = withoutArgumentSignature({
 	fn: () =>
 		createMatcher(actual => {
 			return getSpyCallCount(actual).then(strictEqual(0))
@@ -31,7 +31,7 @@ export const anySpyNeverCalled = emptyParamSignature({
 export const anySpyCalledExactlyMatching = (expectedCallCount, ...args) =>
 	createMatcher(actual => {
 		return getSpyCallCount(actual)
-			.then(strictEqual(expectedCallCount))
+			.then(exactly(expectedCallCount))
 			.then(() => getSpyExpectedCalls(actual, 1))
 			.then(matchAll(...args))
 	})

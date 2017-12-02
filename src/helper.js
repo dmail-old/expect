@@ -10,7 +10,7 @@ export const createIndexes = (to, from = 0) => {
 
 export const curry = (fn, ...curriedArgs) => (...args) => fn(...[...curriedArgs, ...args])
 
-const canHaveSymbol = value => {
+export const canHaveProperty = value => {
 	if (value === null) {
 		return false
 	}
@@ -20,32 +20,77 @@ const canHaveSymbol = value => {
 	return true
 }
 
-const canHaveNonNativeSymbol = value => {
-	if (canHaveSymbol(value)) {
+export const canHaveOwnProperty = value => {
+	if (canHaveProperty(value)) {
 		return typeof value === "object" || typeof value === "function"
 	}
 	return false
 }
 
-export const hasSymbol = (value, symbol) => {
-	if (canHaveNonNativeSymbol(value)) {
-		// we use Object.prototype.hasOwnProperty to support Object.create(null)
-		return Object.prototype.hasOwnProperty.call(value, symbol)
+export const hasOwnProperty = (value, propertyName) => {
+	if (canHaveOwnProperty(value) === false) {
+		return false
 	}
-	return false
+	// using Object.prototype.hasOwnProperty.call to support Object.create(null)
+	return Object.prototype.hasOwnProperty.call(value, propertyName)
 }
 
-export const emptyParamSignature = ({
+export const hasProperty = (value, propertyName) => {
+	if (canHaveProperty(value) === false) {
+		return false
+	}
+	if (hasOwnProperty(value, propertyName)) {
+		return true
+	}
+	const valuePrototype = Object.getPrototypeOf(value)
+	return hasProperty(valuePrototype, propertyName)
+}
+
+export const getOwnPropertyNames = value => {
+	if (canHaveOwnProperty(value)) {
+		return Object.getOwnPropertyNames(value).concat(Object.getOwnPropertySymbols(value))
+	}
+	return []
+}
+
+const argumentLengthSignature = ({
 	fn,
-	createMessage = `${fn} must be called without argument`,
+	expectedLength,
+	createMessage = (fn, args) => {
+		if (expectedLength === 0) {
+			return `${fn} must be called without argument`
+		}
+		return `${fn} must be called with ${expectedLength} argument, (got ${args.length})`
+	},
 }) => (...args) => {
-	if (args.length > 0) {
-		throw new Error(createMessage())
+	if (args.length === expectedLength) {
+		return fn(...args)
 	}
-	return fn()
+	throw new Error(createMessage(fn, args))
 }
 
-export const oneOrMoreParamSignature = ({
+export const withoutArgumentSignature = ({ fn, createMessage }) =>
+	argumentLengthSignature({
+		length: 0,
+		fn,
+		createMessage,
+	})
+
+export const oneArgumentSignature = ({ fn, createMessage }) =>
+	argumentLengthSignature({
+		length: 1,
+		fn,
+		createMessage,
+	})
+
+export const twoArgumentSignature = ({ fn, createMessage }) =>
+	argumentLengthSignature({
+		length: 2,
+		fn,
+		createMessage,
+	})
+
+export const oneArgumentOrMoreSignature = ({
 	fn,
 	createMessage = `${fn} must be called with one argument or more`,
 }) => (...args) => {
@@ -53,4 +98,15 @@ export const oneOrMoreParamSignature = ({
 		throw new Error(createMessage())
 	}
 	return fn(...args)
+}
+
+export const firstArgumentNotNullNorUndefined = ({
+	fn,
+	createMessage = firstArg => `${fn} first argument must not be ${firstArg}`,
+}) => (...args) => {
+	const [firstArg] = args
+	if (firstArg === null || firstArg === undefined) {
+		throw new TypeError(createMessage(firstArg))
+	}
+	return fn(firstArg)
 }

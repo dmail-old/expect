@@ -1,4 +1,4 @@
-import { propertiesMatching, strictPropertiesMatching } from "./properties.js"
+import { propertiesMatch, strictPropertiesMatch } from "./properties.js"
 import { createTest } from "@dmail/test"
 import assert from "assert"
 import { createMatcher } from "../matcher.js"
@@ -27,73 +27,110 @@ const assertFailure = (matcher, factory, expectedFailureMessage) => {
 export default createTest({
 	"called without argument": ({ pass }) => {
 		assert.throws(
-			() => propertiesMatching(),
+			() => propertiesMatch(),
 			e => e.message === `propertiesMatching must be called with one argument, got 0`,
 		)
 		assert.throws(
-			() => strictPropertiesMatching(),
+			() => strictPropertiesMatch(),
 			e => e.message === `strictPropertiesMatching must be called with one argument, got 0`,
 		)
 		pass()
 	},
 	"called with 2 argument": ({ pass }) => {
 		assert.throws(
-			() => propertiesMatching(true, true),
+			() => propertiesMatch(true, true),
 			e => e.message === `propertiesMatching must be called with one argument, got 2`,
 		)
 		assert.throws(
-			() => strictPropertiesMatching(true, true),
+			() => strictPropertiesMatch(true, true),
 			e => e.message === `strictPropertiesMatching must be called with one argument, got 2`,
 		)
 		pass()
 	},
-	"called with null": ({ pass }) => {
-		assert.throws(
-			() => propertiesMatching(null),
-			e =>
-				e.message ===
-				`propertiesMatching first argument must be able to hold properties but it was called with
-null
-You can use an object, array or function for instance`,
-		)
-		assert.throws(
-			() => strictPropertiesMatching(null),
-			e =>
-				e.message ===
-				`strictPropertiesMatching first argument must be able to hold properties but it was called with
-null
-You can use an object, array or function for instance`,
-		)
+	"on both null": ({ pass }) => {
+		const createBothNull = () => {
+			return {
+				expected: null,
+				actual: null,
+			}
+		}
+		assertSuccess(propertiesMatch, createBothNull)
+		assertSuccess(strictPropertiesMatch, createBothNull)
 		pass()
 	},
-	"with actual being null": ({ pass }) => {
-		assertFailedWith(
-			propertiesMatching({})(null),
-			"cannot compare properties of null: it has no properties",
-		)
-		assertFailedWith(
-			strictPropertiesMatching({})(null),
-			"cannot compare properties of null: it has no properties",
-		)
+	"on expected null and actual non empty object": ({ pass }) => {
+		const createExtraFoo = () => {
+			return {
+				expected: null,
+				actual: { foo: true },
+			}
+		}
+		assertSuccess(propertiesMatch, createExtraFoo)
+		assertFailure(strictPropertiesMatch, createExtraFoo, "unexpected foo property on value")
 		pass()
 	},
-	"with actual being undefined": ({ pass }) => {
-		assertFailedWith(
-			propertiesMatching({})(undefined),
-			"cannot compare properties of undefined: it has no properties",
-		)
-		assertFailedWith(
-			strictPropertiesMatching({})(undefined),
-			"cannot compare properties of undefined: it has no properties",
-		)
+	"on both undefined": ({ pass }) => {
+		const createBothUndefined = () => {
+			return {
+				expected: undefined,
+				actual: undefined,
+			}
+		}
+		assertSuccess(propertiesMatch, createBothUndefined)
+		assertSuccess(strictPropertiesMatch, createBothUndefined)
 		pass()
 	},
-	"with actual being true": ({ pass }) => {
-		assertFailedWith(propertiesMatching({})(true), "cannot compare properties of a boolean: true")
-		assertFailedWith(
-			strictPropertiesMatching({})(true),
-			"cannot compare properties of a boolean: true",
-		)
+	"on both being true": ({ pass }) => {
+		const createBothTrue = () => {
+			return {
+				expected: true,
+				actual: true,
+			}
+		}
+		assertSuccess(propertiesMatch, createBothTrue)
+		assertSuccess(strictPropertiesMatch, createBothTrue)
+		pass()
+	},
+	"on actual having inherited expected property": ({ pass }) => {
+		const factory = () => {
+			const actualPrototype = { foo: false }
+			return {
+				expected: { foo: true },
+				actual: Object.create(actualPrototype),
+			}
+		}
+		assertFailure(propertiesMatch, factory, "value foo mismatch: expect true but got false")
+		pass()
+	},
+	"on actual having mismatching expected anonymous symbol": ({ pass }) => {
+		const factory = () => {
+			const symbol = Symbol()
+			return {
+				expected: {
+					[symbol]: true,
+				},
+				actual: {
+					[symbol]: false,
+				},
+			}
+		}
+		assertFailure(propertiesMatch, factory, "value Symbol() mismatch: expect true but got false")
+		pass()
+	},
+	"on actual having inherited expect named symbol at property": ({ pass }) => {
+		const factory = () => {
+			const symbol = Symbol("foo")
+			const actualPrototype = {
+				[symbol]: false,
+			}
+			return {
+				expected: {
+					[symbol]: true,
+				},
+				actual: Object.create(actualPrototype),
+			}
+		}
+		assertFailure(propertiesMatch, factory, "value Symbol(foo) mismatch: expect true but got false")
 		pass()
 	},
 	"on empty objects": ({ pass }) => {
@@ -103,9 +140,8 @@ You can use an object, array or function for instance`,
 				expected: {},
 			}
 		}
-
-		assertSuccess(propertiesMatching, createMatchingEmptyObjects)
-		assertSuccess(strictPropertiesMatching, createMatchingEmptyObjects)
+		assertSuccess(propertiesMatch, createMatchingEmptyObjects)
+		assertSuccess(strictPropertiesMatch, createMatchingEmptyObjects)
 		pass()
 	},
 	"on objects with matching properties ": ({ pass }) => {
@@ -116,8 +152,8 @@ You can use an object, array or function for instance`,
 			}
 		}
 
-		assertSuccess(propertiesMatching, createMatchingObjectWithProperty)
-		assertSuccess(strictPropertiesMatching, createMatchingObjectWithProperty)
+		assertSuccess(propertiesMatch, createMatchingObjectWithProperty)
+		assertSuccess(strictPropertiesMatch, createMatchingObjectWithProperty)
 		pass()
 	},
 	"on nested objects": ({ pass }) => {
@@ -127,8 +163,8 @@ You can use an object, array or function for instance`,
 				expected: { foo: { bar: true } },
 			}
 		}
-		assertSuccess(propertiesMatching, createMatchingNestedObject)
-		assertSuccess(strictPropertiesMatching, createMatchingNestedObject)
+		assertSuccess(propertiesMatch, createMatchingNestedObject)
+		assertSuccess(strictPropertiesMatch, createMatchingNestedObject)
 		pass()
 	},
 	"on mismatch nested objects": ({ pass }) => {
@@ -140,12 +176,12 @@ You can use an object, array or function for instance`,
 		}
 
 		assertFailure(
-			propertiesMatching,
+			propertiesMatch,
 			createMismatchingNestedObject,
 			"value foo bar mismatch: expect false but got true",
 		)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createMismatchingNestedObject,
 			"value foo bar mismatch: expect false but got true",
 		)
@@ -159,9 +195,9 @@ You can use an object, array or function for instance`,
 			}
 		}
 
-		assertSuccess(propertiesMatching, createNestedExtraProperty)
+		assertSuccess(propertiesMatch, createNestedExtraProperty)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createNestedExtraProperty,
 			"unexpected bar property on value foo",
 		)
@@ -177,12 +213,12 @@ You can use an object, array or function for instance`,
 		}
 
 		assertFailure(
-			propertiesMatching,
+			propertiesMatch,
 			createNestedMissingProperty,
 			"expect bar property on value foo but missing",
 		)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createNestedMissingProperty,
 			"expect bar property on value foo but missing",
 		)
@@ -209,12 +245,12 @@ You can use an object, array or function for instance`,
 		}
 
 		assertFailure(
-			propertiesMatching,
+			propertiesMatch,
 			createCircularStructureContainingMismatch,
 			"value foo bar mismatch: expect false but got true",
 		)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createCircularStructureContainingMismatch,
 			"value foo bar mismatch: expect false but got true",
 		)
@@ -242,12 +278,12 @@ You can use an object, array or function for instance`,
 		}
 
 		assertFailure(
-			propertiesMatching,
+			propertiesMatch,
 			createMissingNestedCircularStructure,
 			"expect value foo aaa to be a circular reference but got an object",
 		)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createMissingNestedCircularStructure,
 			"expect value foo aaa to be a circular reference but got an object",
 		)
@@ -274,9 +310,9 @@ You can use an object, array or function for instance`,
 			}
 		}
 
-		assertSuccess(propertiesMatching, createExtraNestedCircularStructure)
+		assertSuccess(propertiesMatch, createExtraNestedCircularStructure)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createExtraNestedCircularStructure,
 			`expect value foo aaa to be an object but got a circular reference`,
 		)
@@ -291,20 +327,20 @@ You can use an object, array or function for instance`,
 		}
 
 		assertFailure(
-			propertiesMatching,
+			propertiesMatch,
 			createTwoArrowFunctionsWithDifferentNames,
 			`value name mismatch: expect "expected" but got "actual"`,
 		)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createTwoArrowFunctionsWithDifferentNames,
 			`value name mismatch: expect "expected" but got "actual"`,
 		)
 		pass()
 	},
 	"on anonymous arrow function": ({ pass }) => {
-		assertPassedWith(propertiesMatching(() => {})(() => {}))
-		assertPassedWith(strictPropertiesMatching(() => {})(() => {}))
+		assertPassedWith(propertiesMatch(() => {})(() => {}))
+		assertPassedWith(strictPropertiesMatch(() => {})(() => {}))
 		pass()
 	},
 	"on extra hidden nested property": ({ pass }) => {
@@ -325,8 +361,8 @@ You can use an object, array or function for instance`,
 			}
 		}
 
-		assertSuccess(propertiesMatching, createNestedExtraHiddenProperty)
-		assertSuccess(strictPropertiesMatching, createNestedExtraHiddenProperty)
+		assertSuccess(propertiesMatch, createNestedExtraHiddenProperty)
+		assertSuccess(strictPropertiesMatch, createNestedExtraHiddenProperty)
 		pass()
 	},
 	"on missing hidden property": ({ pass }) => {
@@ -348,12 +384,12 @@ You can use an object, array or function for instance`,
 		}
 
 		assertFailure(
-			propertiesMatching,
+			propertiesMatch,
 			createNestedMissingHiddenProperty,
 			"expect bar property on value foo but missing",
 		)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createNestedMissingHiddenProperty,
 			"expect bar property on value foo but missing",
 		)
@@ -375,25 +411,29 @@ You can use an object, array or function for instance`,
 		}
 
 		assertFailure(
-			propertiesMatching,
+			propertiesMatch,
 			createMisMatchingHiddenProperty,
 			"value foo bar mismatch: expect true but got false",
 		)
 		assertFailure(
-			strictPropertiesMatching,
+			strictPropertiesMatch,
 			createMisMatchingHiddenProperty,
 			"value foo bar mismatch: expect true but got false",
 		)
 		pass()
 	},
-	"with custom matcher": ({ pass }) => {
-		const expected = {
-			foo: createMatcher(() => passed()),
+	"on custom matcher": ({ pass }) => {
+		const createWithCustomMatcher = () => {
+			return {
+				expected: {
+					foo: createMatcher(() => passed()),
+				},
+				actual: {
+					foo: {},
+				},
+			}
 		}
-		const actual = {
-			foo: {},
-		}
-		assertPassedWith(propertiesMatching(expected)(actual))
+		assertSuccess(propertiesMatch, createWithCustomMatcher)
 		pass()
 	},
 })

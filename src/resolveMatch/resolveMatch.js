@@ -1,8 +1,9 @@
-import { label, createMatcher, matchAll } from "../matcher.js"
+import { label, createMatcher } from "../matcher.js"
 import { anyThenable } from "../anyThenable/anyThenable.js"
 import { createAction } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
-import { oneOrMoreParamSignature } from "../helper.js"
+import { oneArgumentSignature } from "../helper.js"
+import { createMatcherFrom } from "../createMatcherFrom/createMatcherFrom.js"
 
 const matchThenable = anyThenable()
 const getValueResolvedByThenable = actual => {
@@ -19,11 +20,11 @@ const getValueResolvedByThenable = actual => {
 	})
 }
 
-export const resolveMatching = oneOrMoreParamSignature({
-	fn: (...args) =>
+export const resolveMatch = oneArgumentSignature({
+	fn: expected =>
 		createMatcher(actual => {
-			return getValueResolvedByThenable(actual).then(matchAll(...args))
+			return getValueResolvedByThenable(actual).then(createMatcherFrom(expected))
 		}),
 	createMessage: () =>
-		`resolveMatching must be called with one or more argument, you can use resolveMatching(any())`,
+		`resolveMatch must be called with one argument, you can use resolveMatch(any())`,
 })
