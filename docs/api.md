@@ -3,62 +3,31 @@ https://github.com/dmail/schema/tree/d1f3895ba89b1ee961610bd3722aa6d9c9cb31b8/li
 Et ça?
 
 ```javascript
-expect(10, anyNumberAbove(10), not(20))
+expect(10, matchAll(anyNumberAbove(10), not(20)))
 
-expect(() => {}, throwMatching(any()))
-expect(() => {}, throwMatching(10))
+expect(() => {}, throwMatch(any()))
+expect(() => {}, throwMatch(10))
+
+expect(thenable, resolveMatch(any()))
+expect(thenable, resolveMatch(10))
+expect(thenable, rejectMatch(any()))
+expect(thenable, rejectMatch(10))
+
+expect(spy, firstCallMatch(matchAll(calledWith(0, 1), calledIn(anyNumberAbove(10)))))
+
+expect(thenable, rejectMatch(firstCallMatch(called())))
+
+// comment faire ce qui est ci-dessous?
+// callMatchAll pourrais lire les matchers
+// qui le compose est en déduire ce qu'on expect
+// bref c'est à réfléchir parce qu'on a pas du tout ce qu'il faut pour le moment
 expect(
   () => {},
-  callSpyOnce(
-    spy,
-    calledWith(0, 1),
-    calledIn(10)
-  )
-))
-expect(
-  () => {},
-  callSpyTwice(
-    spy,
-    composeMatcher([
-      calledWith(0, 1),
-      calledWith(10))
-    ])
+  callMatchAll(
+    callSpyTwice(spyA, [[calledWith("a-0"), calledWith("a-1")]),
+    callSpyOnce(spyB, [calledWith("b-0")]),
+    callSpiesSequenceOnce(spyA, spyB),
+    returnMatch(any())
   )
 )
-expect(
-  () => {},
-  callSpies(
-    [spyA, spyB],
-    valuesMatching([
-      matchAll(calledWith(10)),
-      matchAll(calledWith(5))
-    ])
-  )
-)
-expect(
-  () => {},
-  callSpiesSequenceOnce(
-    [spyA, spyB],
-    composeMatcher([
-      matchAll(calledWith(10), calledIn(2)),
-      matchAll(calledWith(11))
-    ])
-  )
-)
-
-expect(thenable, resolveMatching(any()))
-expect(thenable, resolveMatching(10))
-expect(thenable, rejectMatching(any()))
-expect(thenable, rejectMatching(10))
-
-expect(
-  spy,
-  anySpyCalledOnce(calledWith(0, 1), calledIn(anyNumberAbove(10)))
-)
-expect(spy, anySpyCalledOnce(calledWithoutArgument())
-expect(spy, anySpyCalledOnce(calledWith(0, 1)))
-
-expect(thenable, rejectMatching(
-  anySpyCalledOnce(10)
-))
 ```
