@@ -6,7 +6,6 @@ const mustHaveAThenMethod = propertiesMatch({
 	then: any(Function),
 })
 
-export const anyThenable = () =>
-	createMatcher(actual =>
-		mustHaveAThenMethod(actual).then(null, mismatch => `thenable mismatch: ${mismatch}`),
-	)
+export const anyThenable = createMatcher(({ match }) => {
+	match(mustHaveAThenMethod)
+})

@@ -1,35 +1,36 @@
-import { label, createMatcher } from "../matcher.js"
+import { createMatcher } from "../matcher.js"
 import { any } from "../any/any.js"
-import { failed, passed } from "@dmail/action"
 import { oneArgumentSignature } from "../helper.js"
-import { createMatcherFrom } from "../createMatcherFrom/createMatcherFrom.js"
+import { matchAll } from "../matchAll/matchAll.js"
 
 const matchFunction = any(Function)
-const getValueThrowedByFunctionCall = fn => {
-	return matchFunction(fn).then(() => {
-		let throwed = false
-		let throwedValue
 
-		try {
-			fn()
-		} catch (e) {
-			throwed = true
-			throwedValue = e
-		}
+export const throwMatch = oneArgumentSignature({
+	fn: createMatcher(({ match }) => {
+		match(
+			matchAll(
+				matchFunction,
+				createMatcher(({ expected, actual }) => {
+					let throwed = false
+					let throwedValue
 
-		if (throwed === false) {
-			return failed("missing throw")
-		}
-		return passed(label(throwedValue), `${fn} throw`)
-	})
-}
+					try {
+						actual.getValue()
+					} catch (e) {
+						throwed = true
+						throwedValue = e
+					}
 
-export const throwMatching = () =>
-	oneArgumentSignature({
-		fn: expected =>
-			createMatcher(actual => {
-				return getValueThrowedByFunctionCall(actual).then(createMatcherFrom(expected))
-			}),
-		createMessage: () =>
-			`throwMatching() must be called with one or more argument, you can use throwMatching(any())`,
-	})
+					const { fail, match } = actual.trace(throwedValue, "throw")
+
+					if (throwed) {
+						return match(expected)
+					}
+					return fail({ type: "missing-throw" })
+				}),
+			),
+		)
+	}),
+	createMessage: () =>
+		`throwMatch() must be called with one argument, you can use throwMatch(any())`,
+})

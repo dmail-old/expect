@@ -1,51 +1,78 @@
-const createValueTrace = ({ parentTrace, name, value, history }) => {
-	const trace = {}
-	const getDepth = () => (parentTrace ? parentTrace.getDepth() + 1 : 0)
-	const getParentTrace = () => parentTrace
+import { createFactory, isFactoryOf } from "@dmail/mixin"
+
+const createTrace = createFactory(({ getParentTrace, name, value, history, lastValueOf }) => {
+	const getDepth = () => {
+		const parentTrace = getParentTrace()
+		return parentTrace ? parentTrace.getDepth() + 1 : 0
+	}
 	const getName = () => name
 	const getValue = () => value
-	const getFirstTraceFor = searchedValue =>
-		history.find(({ getValue }) => getValue() === searchedValue)
-	const getAllTraceFor = searchedValue =>
-		history.filter(({ getValue }) => getValue() === searchedValue)
-	const nest = (value, name) => {
-		return createValueTrace({
-			parentTrace: trace,
+	const getHistory = () => history
+	const discover = (value, name) => {
+		return createTrace({
+			getParentTrace: () => lastValueOf(),
 			name,
 			value,
 			history,
 		})
 	}
-	const readProperty = name => nest(value[name], name)
+	const discoverProperty = name => discover(value[name], name)
 
-	history.push(trace)
-	Object.assign(trace, {
-		getDepth,
-		getParentTrace,
-		getName,
+	history.push({
 		getValue,
-		getFirstTraceFor,
-		getAllTraceFor,
-		readProperty,
+		lastValueOf,
 	})
 
-	return trace
-}
+	return {
+		getDepth,
+		getName,
+		getValue,
+		getHistory,
+		discover,
+		discoverProperty,
+	}
+})
 
-export const createAnonymousValueTrace = value => {
-	return createValueTrace({
-		parentTrace: null,
+export const isTrace = value => isFactoryOf(createTrace, value)
+
+export const createAnonymousTrace = value => {
+	return createTrace({
+		getParentTrace: () => null,
 		name: "value",
 		value,
 		history: [],
 	})
 }
 
-export const createNamedValueTrace = (value, name) => {
-	return createValueTrace({
-		parentTrace: null,
+export const createNamedTrace = (value, name) => {
+	return createTrace({
+		getParentTrace: () => null,
 		name,
 		value,
 		history: [],
 	})
+}
+
+export const createAnonymousTraceFrom = arg => {
+	if (isTrace(arg)) {
+		return arg
+	}
+	return createAnonymousTrace(arg)
+}
+
+export const createNamedTraceFrom = (arg, name) => {
+	if (isTrace(arg)) {
+		return arg
+	}
+	return createNamedTrace(arg, name)
+}
+
+export const getTracePath = trace => {
+	const path = []
+	let traceAncestor = trace.getParentTrace()
+	while (traceAncestor) {
+		path.unshift(traceAncestor.getName())
+		traceAncestor = traceAncestor.getParentTrace()
+	}
+	return path
 }

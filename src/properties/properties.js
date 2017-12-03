@@ -1,166 +1,143 @@
-/*
-ça serais bien de s'assurer d'un truc du coup: gence ça:
-
-expect(
-	() => {
-		throw { foo: true }
-	},
-	throwMatch(
-		propertiesMatch({
-			foo: false
-		})
-	)
-)
-
-// que ça fail bien avec
-
-"throwed value foo mismatch: expect true but got false"
-
-actuellement propertiesMatch perds la trace de la valeur
-le concept de trace qu'on a mis en place ici il faudrait qu'il soit partagé par tout les matchers
-lorsqu'un matcher est appelé sans trace il est le matcher racine et peut le savoir
-
-*/
-
 import { isMatcher, createMatcher } from "../matcher.js"
-import { passed, sequence, chainFunctions } from "@dmail/action"
-// import { prefixValue } from "../any/any.js"
 import { exactly } from "../exactly/exactly.js"
-// import { uneval } from "@dmail/uneval"
 import {
 	canHaveOwnProperty,
 	getOwnPropertyNames,
-	hasProperty,
 	oneArgumentSignature,
+	hasProperty,
 } from "../helper.js"
-
-// if you want to prevent the recursion behaviour on an object/function
-// you can specify a matcher for the value and it will use the matcher
-/*
-{
-	array: strictEqual(array)
-}
-*/
+import { matchAll } from "../matchAll/matchAll.js"
+import { createAnonymousTrace, getTracePath } from "../trace/trace.js"
 
 const propertyIsEnumerable = (object, name) => {
 	return Object.prototype.propertyIsEnumerable.call(object, name)
 }
 
-const defaultCreateMatcherFromPropertyValue = (expected, recurse) => {
-	if (canHaveOwnProperty(expected)) {
-		return recurse(expected)
-	}
-	return exactly(expected)
+const isActualEnumerable = trace => {
+	return propertyIsEnumerable(trace.getParentTrace().getValue().actual, trace.getName())
 }
 
-const getReference = trace => {
-	const value = trace.getValue()
-	if (typeof value === "object" || typeof value === "function") {
-		return trace.getFirstTraceFor(value)
-	}
-	return null
+const isActualHidden = trace => isActualEnumerable(trace) === false
+
+const isActualConcrete = trace => {
+	return hasProperty(trace.getParentTrace().getValue().actual, trace.getName())
 }
 
-const compareProperties = ({ allowExtra, extraMustBeEnumerable, createPropertyValueMatcher }) => {
-	return createMatcher(({ fail, pass, actual, expected, nest }) => {
-		const actualReference = getReference(actual)
-		const expectedReference = getReference(expected)
-		if (actualReference) {
+const isActualAbstract = trace => isActualConcrete(trace) === false
+
+const getTraceReference = (trace, getter) => {
+	const history = trace.getHistory()
+	const value = getter(trace)
+	const found = history.find(previousTrace => getter(previousTrace) === value)
+	return found ? found.lastValueOf() : null
+}
+
+const getActualReference = trace => getTraceReference(trace, ({ getValue }) => getValue().actual)
+
+const getExpectedReference = trace =>
+	getTraceReference(trace, ({ getValue }) => getValue().expected)
+
+const createPropertyMatcher = (name, matcher) => {
+	return createMatcher(({ actual, composeDiscovering }) => {
+		composeDiscovering(name, actual[name], matcher)
+	})
+}
+
+const propertyMatch = (name, matcher) => {
+	return createPropertyMatcher(
+		name,
+		createMatcher(({ trace, fail, compose }) => {
+			if (isActualAbstract(trace)) {
+				return fail({ type: "missing-property" })
+			}
+			return compose(matcher)
+		}),
+	)
+}
+
+const sameReference = createMatcher(({ trace, expected, fail, pass }) => {
+	const expectedPath = getTracePath(expected)
+
+	const actualReference = getActualReference(trace)
+	if (actualReference === null) {
+		return fail({ type: "missing-recursion" })
+	}
+	const actualPath = getTracePath(actualReference)
+	if (expectedPath.join("") !== actualPath.join("")) {
+		return fail({ type: "recursion-mismatch" })
+	}
+	return pass()
+})
+
+const compareProperties = (expected, { trace, allowExtra, extraMustBeEnumerable }) => {
+	const expectedPropertyNames = getOwnPropertyNames(expected)
+	const propertyMatchers = expectedPropertyNames.map(name => {
+		const expectedPropertyTrace = trace.discoverProperty(name)
+		const expectedPropertyValue = expectedPropertyTrace.getValue()
+
+		if (isMatcher(expectedPropertyValue)) {
+			return propertyMatch(name, expectedPropertyValue)
+		}
+		if (canHaveOwnProperty(expectedPropertyValue)) {
+			const expectedReference = getExpectedReference(expectedPropertyTrace)
 			if (expectedReference) {
-				return pass()
-			}
-			if (allowExtra) {
-				return pass()
-			}
-			if (
-				extraMustBeEnumerable &&
-				propertyIsEnumerable(actual.getParentTrace().getValue(), actual.getName()) === false
-			) {
-				return pass()
-			}
-			return fail({ type: "extra-recursion", data: actualReference })
-		}
-		if (expectedReference) {
-			if (actualReference) {
-				return pass()
-			}
-			return fail({ type: "missing-recursion", data: expectedReference })
-		}
-
-		const actualValue = actual.getValue()
-		const expectedValue = expected.getValue()
-
-		const compareExpectedProperties = () => {
-			const expectedPropertyNames = getOwnPropertyNames(expectedValue)
-			const recurse = expected => {
-				return compareProperties(expected, {
-					allowExtra,
-					extraMustBeEnumerable,
-					createPropertyValueMatcher,
-				})
+				return propertyMatch(name, sameReference(expectedReference))
 			}
 
-			return sequence(expectedPropertyNames, name => {
-				const propertyActual = actualValue[name]
-				const propertyExpected = expectedValue[name]
-				const { fail, match } = nest({
-					name,
-					actual: propertyActual,
-					expected: propertyExpected,
-				})
-				if (hasProperty(actual, name) === false) {
-					return fail({ type: "missing" })
-				}
-				if (isMatcher(propertyExpected)) {
-					return match(propertyExpected)
-				}
-				return match(createPropertyValueMatcher(recurse))
+			return compareProperties(expectedPropertyValue, {
+				trace: expectedPropertyTrace,
+				allowExtra,
+				extraMustBeEnumerable,
 			})
 		}
+		return exactly(expectedPropertyValue)
+	})
+	const matchExpectedProperties = matchAll(...propertyMatchers)
 
-		const compareActualProperties = () => {
-			if (allowExtra) {
-				return passed()
-			}
+	return createMatcher(({ actual, compose }) => {
+		compose(
+			matchAll(
+				matchExpectedProperties(actual),
+				createMatcher(({ pass, compose }) => {
+					if (allowExtra) {
+						return pass()
+					}
 
-			const actualPropertyNames = getOwnPropertyNames(actualValue)
-			return sequence(actualPropertyNames, name => {
-				const { pass, fail } = nest({
-					name,
-					actual: actualValue[name],
-					expected: expected.getValue()[name],
-				})
-
-				if (hasProperty(expected, name)) {
-					return pass()
-				}
-				if (extraMustBeEnumerable && propertyIsEnumerable(actualValue, name) === false) {
-					return pass()
-				}
-				return fail({ type: "extra" })
-			})
-		}
-
-		return chainFunctions(compareExpectedProperties, compareActualProperties)
+					const actualPropertyNames = getOwnPropertyNames(actual)
+					const actualExtraPropertyNames = actualPropertyNames.filter(
+						name => expectedPropertyNames.includes(name) === false,
+					)
+					const actualPropertyMatchers = actualExtraPropertyNames.map(name => {
+						return createPropertyMatcher(name, ({ trace, fail, pass }) => {
+							if (extraMustBeEnumerable && isActualHidden(trace)) {
+								return pass()
+							}
+							return fail({ type: "extra" })
+						})
+					})
+					return compose(matchAll(...actualPropertyMatchers))
+				}),
+			),
+		)
 	})
 }
 
 export const propertiesMatch = oneArgumentSignature({
 	fn: expected =>
-		compareProperties({
+		compareProperties(expected, {
+			trace: createAnonymousTrace(expected),
 			allowExtra: true,
 			extraMustBeEnumerable: true,
-			createPropertyValueMatcher: defaultCreateMatcherFromPropertyValue,
-		})(expected),
+		}),
 })
 
 export const strictPropertiesMatch = oneArgumentSignature({
 	fn: expected =>
-		compareProperties({
+		compareProperties(expected, {
+			trace: createAnonymousTrace(expected),
 			allowExtra: false,
 			extraMustBeEnumerable: true,
-			createPropertyValueMatcher: defaultCreateMatcherFromPropertyValue,
-		})(expected),
+		}),
 })
 
 // add propertiesMatchingIncludingHidden

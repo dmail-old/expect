@@ -71,31 +71,31 @@ const argumentLengthSignature = ({
 
 export const withoutArgumentSignature = ({ fn, createMessage }) =>
 	argumentLengthSignature({
-		length: 0,
+		expectedLength: 0,
 		fn,
 		createMessage,
 	})
 
 export const oneArgumentSignature = ({ fn, createMessage }) =>
 	argumentLengthSignature({
-		length: 1,
+		expectedLength: 1,
 		fn,
 		createMessage,
 	})
 
 export const twoArgumentSignature = ({ fn, createMessage }) =>
 	argumentLengthSignature({
-		length: 2,
+		expectedLength: 2,
 		fn,
 		createMessage,
 	})
 
 export const oneArgumentOrMoreSignature = ({
 	fn,
-	createMessage = `${fn} must be called with one argument or more`,
+	createMessage = fn => `${fn} must be called with one argument or more`,
 }) => (...args) => {
 	if (args.length === 0) {
-		throw new Error(createMessage())
+		throw new Error(createMessage(fn, args))
 	}
 	return fn(...args)
 }

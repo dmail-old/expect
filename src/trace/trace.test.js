@@ -1,4 +1,4 @@
-import { createAnonymousValueTrace } from "./trace.js"
+import { createTraceFrom } from "./trace.js"
 import { createTest } from "@dmail/test"
 import assert from "assert"
 
@@ -7,7 +7,7 @@ export const test = createTest({
 		const value = {
 			foo: true,
 		}
-		const trace = createAnonymousValueTrace(value)
+		const trace = createTraceFrom(value)
 		assert.equal(trace.getDepth(), 0)
 		assert.equal(trace.getName(), "value")
 		assert.equal(trace.getParentTrace(), null)
@@ -17,7 +17,7 @@ export const test = createTest({
 		assert.equal(trace.getFirstTraceFor(true), null)
 		assert.equal(trace.getFirstTraceFor(undefined), null)
 
-		const fooTrace = trace.readProperty("foo")
+		const fooTrace = trace.traceProperty("foo")
 		assert.equal(fooTrace.getDepth(), 1)
 		assert.equal(fooTrace.getName(), "foo")
 		assert.equal(fooTrace.getParentTrace(), trace)
@@ -28,7 +28,7 @@ export const test = createTest({
 		assert.equal(fooTrace.getFirstTraceFor(undefined), null)
 
 		// a part of the concept is to support abstract property (a property which is not set)
-		const barTrace = trace.readProperty("bar")
+		const barTrace = trace.traceProperty("bar")
 		assert.equal(barTrace.getDepth(), 1)
 		assert.equal(barTrace.getName(), "bar")
 		assert.equal(barTrace.getParentTrace(), trace)
@@ -49,10 +49,10 @@ export const test = createTest({
 		const value = {}
 		value.parent = value
 
-		const trace = createAnonymousValueTrace(value)
-		const parentTrace = trace.readProperty("parent")
+		const trace = createTraceFrom(value)
+		const parentTrace = trace.traceProperty("parent")
 
-		assert.equal(parentTrace.getFirstTraceFor(value), trace)
+		assert.equal(parentTrace.getReference(), trace)
 		pass()
 	},
 	"trace on value with circular nested reference": ({ pass }) => {
@@ -60,10 +60,10 @@ export const test = createTest({
 			foo: {},
 		}
 		value.foo.self = value.foo
-		const trace = createAnonymousValueTrace(value)
-		const fooTrace = trace.readProperty("foo")
-		const selfTrace = fooTrace.readProperty("self")
-		assert.equal(selfTrace.getFirstTraceFor(value.foo), fooTrace)
+		const trace = createTraceFrom(value)
+		const fooTrace = trace.traceProperty("foo")
+		const selfTrace = fooTrace.traceProperty("self")
+		assert.equal(selfTrace.getReference(), fooTrace)
 		pass()
 	},
 })

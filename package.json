@@ -20,6 +20,7 @@
 	},
 	"dependencies": {
 		"@dmail/action": "1.7.0",
+		"@dmail/mixin": "2.0.0",
 		"@dmail/spy": "0.0.2",
 		"@dmail/uneval": "1.0.0"
 	},
@@ -33,6 +34,7 @@
 		"babel-core": "7.0.0-beta.0",
 		"babel-eslint": "8.0.0",
 		"babel-preset-env": "2.0.0-beta.0",
+		"babel-plugin-transform-object-rest-spread": "^6.26.0",
 		"codecov": "2.3.0",
 		"eslint": "3.19.0",
 		"eslint-plugin-import": "2.6.0",

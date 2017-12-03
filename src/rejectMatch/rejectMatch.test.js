@@ -1,4 +1,4 @@
-import { expectRejectWith } from "./expectRejectWith.js"
+import { rejectMatch } from "./rejectMatch.js"
 import { createTest } from "@dmail/test"
 import assert from "assert"
 import { passed } from "@dmail/action"
@@ -22,48 +22,45 @@ const assertAfter = (fn, ensure) => {
 		reason => {
 			ensure(action, reason)
 			return passed()
-		}
+		},
 	)
 }
 
 const createResolvedThenable = value => ({
 	then: onResolve => {
 		setTimeout(onResolve, 0, value)
-	}
+	},
 })
+
 const createRejectedThenable = value => ({
 	then: (onResolve, onReject) => {
 		setTimeout(onReject, 0, value)
-	}
+	},
 })
 
-export default createTest({
-	"reject to the expected value": () => {
-		const value = 1
-		return assertAfter(
-			() => expectRejectWith(createRejectedThenable(value), value),
-			action => assertPassedWith(action)
-		)
-	},
+export const test = createTest({
 	"reject to unexpected value": () => {
 		const value = 1
 		const unexpectedValue = 2
 		return assertAfter(
-			() => expectRejectWith(createRejectedThenable(unexpectedValue), value),
-			action =>
-				assertFailedWith(
-					action,
-					`thenable rejected value mismatch: ${unexpectedValue} does not match ${value}`
-				)
+			() => rejectMatch(value)(createRejectedThenable(unexpectedValue)),
+			action => assertFailedWith(action, `expect thenable rejected value to match ${value}`),
 		)
 	},
 	"resolve instead of reject": () => {
 		const value = 1
 		const resolvedValue = 2
 		return assertAfter(
-			() => expectRejectWith(createResolvedThenable(resolvedValue), value),
+			() => rejectMatch(value)(createResolvedThenable(resolvedValue)),
 			action =>
-				assertFailedWith(action, `thenable expected to reject resolved with ${resolvedValue}`)
+				assertFailedWith(action, `expect thenable to reject but it resolved with ${resolvedValue}`),
 		)
-	}
+	},
+	"reject to the expected value": () => {
+		const value = 1
+		return assertAfter(
+			() => rejectMatch(value)(createRejectedThenable(value)),
+			action => assertPassedWith(action),
+		)
+	},
 })

@@ -1,5 +1,4 @@
 import { createMatcher } from "../matcher.js"
-import { failed, passed } from "@dmail/action"
 
 const getConstructorName = value => {
 	if (value === null) {
@@ -41,16 +40,22 @@ export const prefixValue = value => prefix(getConstructorName(value))
 const createFailedConstructorMessage = (actual, expected) =>
 	`expect ${prefix(expected)} but got ${prefix(actual)}`
 
-export const matchConstructorName = expectedConstructorName =>
-	createMatcher(value => {
-		const actualConstructorName = getConstructorName(value)
-		if (actualConstructorName !== expectedConstructorName) {
-			return failed(
-				createFailedConstructorMessage(actualConstructorName, expectedConstructorName, value),
-			)
+export const matchConstructorName = expectedConstructorName => {
+	return createMatcher(({ actual, fail, pass }) => {
+		const actualConstructorName = getConstructorName(actual.getValue())
+		if (actualConstructorName === expectedConstructorName) {
+			return pass()
 		}
-		return passed(value)
+		return fail({
+			type: "constructor-mismatch",
+			message: createFailedConstructorMessage(
+				actualConstructorName,
+				expectedConstructorName,
+				actual.getValue(),
+			),
+		})
 	})
+}
 
 export const matchConstructedBy = expectedConstructor =>
 	matchConstructorName(expectedConstructor.name)
@@ -60,7 +65,7 @@ export const matchConstructedByFromValue = expectedValue =>
 
 export const any = expectedConstructor => {
 	if (expectedConstructor === undefined) {
-		return createMatcher(() => passed())
+		return createMatcher(({ pass }) => pass())
 	}
 	return matchConstructedBy(expectedConstructor)
 }

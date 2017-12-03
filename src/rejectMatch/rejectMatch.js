@@ -1,30 +1,44 @@
-import { label, createMatcher } from "../matcher.js"
-import { anyThenable } from "../anyThenable/anyThenable.js"
-import { createAction } from "@dmail/action"
-import { uneval } from "@dmail/uneval"
+import { createMatcher } from "../matcher.js"
 import { oneArgumentSignature } from "../helper.js"
-import { createMatcherFrom } from "../createMatcherFrom/createMatcherFrom.js"
+// import { createMatcherFrom } from "../createMatcherFrom/createMatcherFrom.js"
+import { exactly } from "../exactly/exactly.js"
+// import { anyThenable } from "../anyThenable/anyThenable.js"
+// import { matchAll } from "../matchAll/matchAll.js"
 
-const matchThenable = anyThenable()
-const getValueRejectedByThenable = actual => {
-	return matchThenable(actual).then(() => {
-		const action = createAction()
+// const matchThenable = anyThenable()
 
-		actual.then(
-			value => action.fail(`thenable expected to reject resolved with ${uneval(value)}`),
-			// setTimeout to avoir promise catching error
-			value => setTimeout(() => action.pass(label(value, `value rejected by thenable`))),
-		)
-
-		return action
-	})
-}
+const unexpectedResolvedValue = createMatcher(({ fail }) => {
+	fail({ type: "unexpected-resolved-value" })
+})()
 
 export const rejectMatch = oneArgumentSignature({
-	fn: expected =>
-		createMatcher(actual => {
-			return getValueRejectedByThenable(actual).then(createMatcherFrom(expected))
-		}),
+	fn: createMatcher(
+		({ expected, compose }) => {
+			const expectReject = createMatcher(({ actual, composeDiscovering }) => {
+				actual.then(
+					value =>
+						setTimeout(() => {
+							composeDiscovering("resolved value", value, unexpectedResolvedValue)
+						}),
+					value =>
+						setTimeout(() => {
+							composeDiscovering("rejected value", value, exactly(expected))
+						}),
+				)
+			})()
+			compose(expectReject)
+
+			// match(
+			// 	matchAll(
+			// 		matchThenable,
+			// 		matchReject
+			// 	)
+			// )
+		},
+		{
+			defaultName: "thenable",
+		},
+	),
 	createMessage: () =>
 		`rejectMatch must be called with one argument, you can use rejectMatch(any())`,
 })
