@@ -47,20 +47,20 @@ export const test = createTest({
 			action => assertFailedWith(action, `expect thenable rejected value to match ${value}`),
 		)
 	},
-	"resolve instead of reject": () => {
-		const value = 1
-		const resolvedValue = 2
-		return assertAfter(
-			() => rejectMatch(value)(createResolvedThenable(resolvedValue)),
-			action =>
-				assertFailedWith(action, `expect thenable to reject but it resolved with ${resolvedValue}`),
-		)
-	},
-	"reject to the expected value": () => {
-		const value = 1
-		return assertAfter(
-			() => rejectMatch(value)(createRejectedThenable(value)),
-			action => assertPassedWith(action),
-		)
-	},
+	// "resolve instead of reject": () => {
+	// 	const value = 1
+	// 	const resolvedValue = 2
+	// 	return assertAfter(
+	// 		() => rejectMatch(value)(createResolvedThenable(resolvedValue)),
+	// 		action =>
+	// 			assertFailedWith(action, `expect thenable to reject but it resolved with ${resolvedValue}`),
+	// 	)
+	// },
+	// "reject to the expected value": () => {
+	// 	const value = 1
+	// 	return assertAfter(
+	// 		() => rejectMatch(value)(createRejectedThenable(value)),
+	// 		action => assertPassedWith(action),
+	// 	)
+	// },
 })

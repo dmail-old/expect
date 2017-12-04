@@ -71,7 +71,7 @@ export const getTracePath = trace => {
 	const path = []
 	let traceAncestor = trace.getParentTrace()
 	while (traceAncestor) {
-		path.unshift(traceAncestor.getName())
+		path.push(traceAncestor.getName())
 		traceAncestor = traceAncestor.getParentTrace()
 	}
 	return path

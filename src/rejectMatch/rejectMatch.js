@@ -1,44 +1,40 @@
-import { createMatcher } from "../matcher.js"
-import { oneArgumentSignature } from "../helper.js"
+import { createMatcher, createMatcherFromFunction, createMatcherDiscovering } from "../matcher.js"
 // import { createMatcherFrom } from "../createMatcherFrom/createMatcherFrom.js"
 import { exactly } from "../exactly/exactly.js"
 // import { anyThenable } from "../anyThenable/anyThenable.js"
-// import { matchAll } from "../matchAll/matchAll.js"
+import { matchAll } from "../matchAll/matchAll.js"
+import { fromPromise, passed } from "@dmail/action"
 
 // const matchThenable = anyThenable()
 
-const unexpectedResolvedValue = createMatcher(({ fail }) => {
-	fail({ type: "unexpected-resolved-value" })
-})()
-
-export const rejectMatch = oneArgumentSignature({
-	fn: createMatcher(
-		({ expected, compose }) => {
-			const expectReject = createMatcher(({ actual, composeDiscovering }) => {
-				actual.then(
-					value =>
-						setTimeout(() => {
-							composeDiscovering("resolved value", value, unexpectedResolvedValue)
+export const rejectMatch = createMatcher({
+	name: "rejectMatch",
+	valueName: "thenable",
+	match: () => {
+		return matchAll(
+			// matchThenable,
+			createMatcherDiscovering(
+				actual => {
+					return fromPromise(actual).then(
+						value => ({
+							name: "resolved value",
+							value,
 						}),
-					value =>
-						setTimeout(() => {
-							composeDiscovering("rejected value", value, exactly(expected))
-						}),
-				)
-			})()
-			compose(expectReject)
-
-			// match(
-			// 	matchAll(
-			// 		matchThenable,
-			// 		matchReject
-			// 	)
-			// )
-		},
-		{
-			defaultName: "thenable",
-		},
-	),
-	createMessage: () =>
-		`rejectMatch must be called with one argument, you can use rejectMatch(any())`,
+						reason =>
+							passed({
+								name: "rejected value",
+								value: reason,
+							}),
+					)
+				},
+				createMatcherFromFunction(({ trace, fail }) => {
+					if (trace.getName() === "resolved value") {
+						return fail({ type: "unexpected-resolved-value" })
+					}
+					debugger
+					return exactly
+				}),
+			),
+		)
+	},
 })

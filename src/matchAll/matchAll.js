@@ -1,8 +1,11 @@
-import { createMatcher } from "../matcher.js"
+import { createMatcherFromFunction } from "../matcher.js"
 import { sequence } from "@dmail/action"
-import { createMatcherFrom } from "../createMatcherFrom/createMatcherFrom.js"
+// import { createMatcherFrom } from "../createMatcherFrom/createMatcherFrom.js"
 
-export const matchAll = (...args) =>
-	createMatcher(({ actual }) => {
-		return sequence(args, arg => createMatcherFrom(arg)(actual))
+export const matchAll = (...args) => {
+	// const matchers = args.map(arg => createMatcherFrom(arg))
+	const matchers = args
+	return createMatcherFromFunction(({ trace, expected }) => {
+		return sequence(matchers, matcher => matcher(expected)(trace))
 	})
+}

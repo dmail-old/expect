@@ -1,34 +1,6 @@
-/*
-const exactly = createMatcher(({ expected, actual, pass, fail }) => {
-	if (actual.getValue() === expected.getValue()) {
-		return pass()
-	}
-	return fail()
-})
-
-// exactly est un matcher
-const exactly10 = exactly(10)
-// exactly10 est une expectation
-const result = exactly10(9)
-// result est une assertion
-
-voir si on peut pas éviter le actual/expected qui est wrap dans une trace
-mais plutôt avoir actual et expected qui soit les valeurs
-et avoir un objet trace genre {actual, expected, trace}
-et trace donne les infos dont on a besoin
-
-lorsqu'on nest en fait on modifie l'objet trace mais pas actual ou expected
-en tous cas on est pas obligé de la modifier
-
-quand un matcher est appelé avec actual, si actual n'est pas une trace
-alors on la crée
-
-il faudrais que l'objet trace ait un pointeur getActual et getExpected
-*/
-
 import { hasProperty } from "./helper.js"
 import { isTrace, createNamedTrace } from "./trace/trace.js"
-import { createAction } from "@dmail/action"
+import { createAction, fromFunction, isAction } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 
 const getValueNameFromTrace = ({ getName, getParentTrace }) => {
@@ -49,7 +21,7 @@ const getValueNameFromTrace = ({ getName, getParentTrace }) => {
 	return `${getValueNameFromTrace(parentTrace)} ${String(name)}`
 }
 
-export const createFailureMessage = ({ type, actual, expected, trace }) => {
+export const createFailureMessage = ({ type, trace, expected, actual }) => {
 	if (type === "unexpected-resolved-value") {
 		return `expect ${getValueNameFromTrace(
 			trace.getParentTrace(),
@@ -62,13 +34,45 @@ const matchSymbol = Symbol()
 
 export const isMatcher = value => hasProperty(value, matchSymbol)
 
-// ça serait bien de se dire que createMatcher peut se produire en deux phases,
-// en gros y'a la phase où on reçoit expected
-// et la phase ou on reçoit actual,
-// chacune de ces phases peut déclencher quelque chose
+const defaultCreateSignatureMessage = ({ name, type, args }) => {
+	if (type === "missing") {
+		return `${name} must be called with one argument but was called without. You can use ${
+			name
+		}(any())`
+	}
+	return `${name} must be called with one argument but was called with ${args.length}`
+}
 
-export const createMatcher = (fn, { defaultName = "value" } = {}) => {
-	const matcher = expected => {
+export const createMatcher = ({
+	match,
+	name = match.name,
+	valueName = "value",
+	createBadSignatureMessage = defaultCreateSignatureMessage,
+}) => {
+	const matcher = (...args) => {
+		if (args.length === 0) {
+			throw new Error(
+				createBadSignatureMessage({
+					type: "missing",
+					name,
+					args,
+					fallback: defaultCreateSignatureMessage,
+				}),
+			)
+		}
+		if (args.length > 1) {
+			throw new Error(
+				createBadSignatureMessage({
+					type: "extra",
+					name,
+					args,
+					fallback: defaultCreateSignatureMessage,
+				}),
+			)
+		}
+
+		const [expected] = args
+
 		const expectation = actual => {
 			const trace = isTrace(actual)
 				? actual
@@ -77,11 +81,11 @@ export const createMatcher = (fn, { defaultName = "value" } = {}) => {
 							actual,
 							expected,
 						},
-						defaultName,
+						valueName,
 					)
 			actual = trace.getValue().actual
 			const action = createAction()
-			const pass = (...args) => action.pass(...args)
+			const pass = () => action.pass()
 			const fail = data =>
 				action.fail({
 					actual,
@@ -90,45 +94,69 @@ export const createMatcher = (fn, { defaultName = "value" } = {}) => {
 					...data,
 				})
 
-			const compose = expectation => pass(expectation(trace))
-			const composeDiscovering = (name, value, expectation) => {
-				if (isMatcher(expectation)) {
-					expectation = expectation(expectation)
-				}
-				pass(
-					expectation(
-						trace.discover(
-							{
-								actual: value,
-								expected: expectation,
-							},
-							name,
-						),
-					),
-				)
-			}
-
-			fn({
+			const returnValue = match({
 				trace,
 				expected,
 				actual,
 				pass,
 				fail,
-				compose,
-				composeDiscovering,
 			})
 
-			return action.then(null, failure => {
-				if (trace === failure.trace) {
-					return createFailureMessage(failure)
-				}
-				return failure
-			})
+			if (isMatcher(returnValue)) {
+				const expectation = returnValue(expected)
+				const assertion = expectation(trace)
+				assertion.then(pass, fail)
+			} else if (isAction(returnValue)) {
+				returnValue.then(pass, fail)
+			}
+
+			return action.then(
+				() => undefined,
+				failure => {
+					if (trace === failure.trace) {
+						return createFailureMessage(failure)
+					}
+					return failure
+				},
+			)
 		}
 		return expectation
 	}
 	matcher[matchSymbol] = true
 	return matcher
+}
+
+export const createFailedMatcher = value => {
+	return createMatcher({
+		match: ({ fail }) => fail(value),
+	})
+}
+
+export const createPassedMatcher = value => {
+	return createMatcher({
+		match: ({ pass }) => pass(value),
+	})
+}
+
+export const createMatcherFromFunction = fn => {
+	return createMatcher({
+		match: fn,
+	})
+}
+
+export const createMatcherDiscovering = (discoverer, matcher) => {
+	return createMatcherFromFunction(({ trace, actual }) => {
+		fromFunction(() => discoverer(actual)).then(({ name, value, pass, fail }) => {
+			const discoveredTrace = trace.discover(
+				{
+					actual: value,
+					expected: matcher,
+				},
+				name,
+			)
+			matcher(matcher)(discoveredTrace).then(pass, fail)
+		})
+	})
 }
 
 // const createPropertiesFailureMessage = ({ type, trace, data }) => {

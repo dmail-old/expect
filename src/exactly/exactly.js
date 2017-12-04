@@ -1,10 +1,10 @@
-import { createMatcher } from "../matcher.js"
+import { createMatcherFromFunction } from "../matcher.js"
 import { uneval } from "@dmail/uneval"
 
 const createExactlyFailureMessage = (actual, expected) =>
 	`expect ${uneval(expected)} but got ${uneval(actual)}`
 
-export const exactly = createMatcher(({ expected, actual, fail, pass }) => {
+export const exactly = createMatcherFromFunction(({ expected, actual, fail, pass }) => {
 	if (actual === expected) {
 		return pass()
 	}
