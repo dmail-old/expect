@@ -3,8 +3,8 @@ https://github.com/dmail/schema/tree/d1f3895ba89b1ee961610bd3722aa6d9c9cb31b8/li
 ```javascript
 /*
 Some explanation:
-assert(actual, matcher) is used as entry point and is almost equivalent to
-matcher(actual)
+assert(actual, expected) is used as entry point and is almost equivalent to
+expected(actual)
 
 every function starting with expect is used to do something with the value first and then
 to use the result of what we have done with the value to compare with a matcher
@@ -20,33 +20,33 @@ expectResolve en allat lire une valeur + ou - indépendante de la valeur actual 
 expect
 */
 
-assert(10, matchAll(anyNumberAbove(10), not(20)))
+assert(10, expectAll(expectAnyNumberAbove(10), expectNot(20)))
 
-assert(thenable, expectResolve(any()))
-assert(thenable, expectResolve(10))
-assert(thenable, expectReject(any()))
-assert(thenable, expectReject(10))
+assert(thenable, expectResolve(expectAny()))
+assert(thenable, expectResolve(expect(10))
+assert(thenable, expectReject(expectAny()))
+assert(thenable, expectReject(expect(10))
 assert(thenable, expectReject(expectFirstCall(called())))
 
 const object = {}
 assert(() => {
   object.foo = "bar"
-}, expectCall(
-  expect(object, expectProperty("foo", any(String))
+}, callExpecting(
+  expectFrom(object, expectProperty("foo", expectAny(String))
 )
 
 assert(() => {
   throw null
-}, expectCall(expectThrow(any()))
+}, callExpecting(expectThrow(expectAny()))
 assert(() => {
   throw 10
-}, expectCall(expectThrow(10)))
-assert(() => true, expectCall(expectReturn(Boolean)))
+}, callExpecting(expectThrow(expect(10)))
+assert(() => true, callExpecting(expectReturn(expectAny(Boolean)))
 
 assert(spy, expectFirstCall(
-  matchAll(
-    expectArguments([0, 1]),
-    expectDuration(anyNumberAbove(10))
+  expectAll(
+    expectCalledWith(0, 1),
+    expectCalledIn(expectAnyNumberAbove(10))
   )
 ))
 
@@ -57,10 +57,10 @@ assert(
     spyA("a-1")
     return undefined
   },
-  expectCall(
-    matchAll(
-      expectSpyCalls(spyA, [[callArgumentsMatch("a-0"), callArgumentsMatch("a-1")]),
-      expectSpyCalls(spyB, [callArgumentsMatch("b-0")]),
+  callExpecting(
+    expectAll(
+      expectSpyCalls(spyA, [[expectCalledWith("a-0"), expectCalledWith("a-1")]),
+      expectSpyCalls(spyB, [expectCalledWith("b-0")]),
       expectSpyCalls(spyC, []),
       expectSpySequenceOnce(spyA, spyB),
       expectReturn(any())
