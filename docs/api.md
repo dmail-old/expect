@@ -17,18 +17,33 @@ const thenable = {
 expect(
 	thenable,
 	aThenableResolvedWith(
-		aFunctionWhichWhenCalledWith(
-			[10],
-			matchAll(
-				callSpy(spyA, calledWith(10)),
-				callSpy(spyB, calledWith(11)),
-				callSpy(spyA, calledWith(11)),
-				matchNot(callSpy(spyC)),
-				returnWith(undefined),
+	  mapMatch(
+		  (fn) => () => fn(10),
+			aFunctionWhich(
+				calls(spyA, calledWith(10)),
+				// having a second spy expectation means order must be respected
+				calls(spyB, calledWith(11)),
+				// it means we expect two calls on spyA
+				calls(spyA, calledWith(11)),
+				// to be sure it does not do something unexpected
+				neverCalls(spyC),
+				// must not modify listed properties on object (will use ===)
+				preservesProperty(object, 'foo'),
+				preservesProperty(object, 'bar'),
+				doesNotAddProperty(object, 'bar'),
+				doesNotAddAnyProperty(object),
+				// property must exist before function gets calls and be set to something matching
+				updatesProperty(object, 'foo', matchAny()),
+				// property must not exist before function gets calls and be set to something matching
+				addsProperty(object, 'bar', matchAny()),
+				returnsWith(undefined), // must be the last, and cannot coexist with throwWith
 			),
 		),
 	),
 )
+
+// we could add isPureRegarding(objectOrFunction) wich means all properties are not modified (preservesProperty)
+// and doesNotAddProperty()
 
 // keep in mind:
 // if the function was calling spyB before spyA, it would be reported as:
@@ -39,13 +54,4 @@ expect(
 // "two unexpected call to spyB, it is expected to be called once"
 // if spyC was called it must be reported as
 // "unxpected call to spyC, it is expected to be never called"
-
-// the above is cool but what if :
-aFunctionWhichWhenCalled(matchSomeOf(callSpy(spyA, calledWith(10)), callSpy(spyB, calledWith(11))))
-// ici on voudrait donc dire soit la fonction apelle A et on est bon
-// soit elle apelle B et on est bon aussi
-// mais du coup si on veut s'assurer de ce qui s'est passé pendant l'apell
-// on va faussement assumer qu'on veut spyA + spyB, il faut que matchSomeOf
-// fasse bien la distinction entre les groupes
-// pour pas qu'on assume qu'il faut spyA et spyB mais bien spyA ou spyB
 ```
