@@ -67,6 +67,17 @@ export const createNamedTraceFrom = (arg, name) => {
 	return createNamedTrace(arg, name)
 }
 
+export const getTraceReference = (
+	trace,
+	getter = ({ getValue }) => getValue(),
+	compare = (a, b) => a === b,
+) => {
+	const history = trace.getHistory()
+	const value = getter(trace)
+	const found = history.find(previousTrace => compare(getter(previousTrace), value))
+	return found ? found.lastValueOf() : null
+}
+
 export const getTracePath = trace => {
 	const path = []
 	let traceAncestor = trace.getParentTrace()

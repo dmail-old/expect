@@ -1,6 +1,7 @@
-import { createFactory } from "@dmail/mixin"
+import { createFactory, isFactoryOf } from "@dmail/mixin"
 import { createAction } from "@dmail/action"
-import { createAnonymousTrace } from "./trace/trace"
+import { createAnonymousTrace, getTraceReference } from "./trace/trace"
+import { canHaveOwnProperty } from "./helper"
 
 export const createExpectation = createFactory(({ expected, compare = () => {} }) => {
 	let nextExpectation
@@ -55,80 +56,148 @@ export const createExpectation = createFactory(({ expected, compare = () => {} }
 	}
 })
 
-/*
-expectExactly(10)
+// const createExpectationFunction = properties => expected => {
+// 	return createExpectation({
+// 		expected,
+// 		...properties,
+// 	})
+// }
 
-const createExpectationFunction = (properties) => (expected) => {
-  return createExpectation({
-    expected,
-    ...properties
-  })
+const createExpectationFunctionFromCompare = compare => expected => {
+	return createExpectation({
+		expected,
+		compare,
+	})
 }
 
-const expectExactly = createExpectationFunction({
-  compare: ({ actual, expected, fail, pass }) => {
-    if (actual === expected) {
-      return pass()
-    }
-    return fail()
-  }
+export const exactly = createExpectationFunctionFromCompare(({ actual, expected, fail, pass }) => {
+	if (actual === expected) {
+		return pass()
+	}
+	return fail()
 })
-*/
 
-/*
-expectResolve(expectExactly(10))
+const hasProperty = null // will be imported from an helper
+export const propertyPresence = createExpectationFunctionFromCompare(
+	({ actual, expected, fail, pass }) => {
+		if (hasProperty(actual, expected)) {
+			return pass(actual[expected])
+		}
+		return fail()
+	},
+)
 
-const expectResolve = (expected) => {
-  return createExpectation({
-    expected,
-    name: 'thenable',
-    compare: ({ actual, pass }) => {
-      actual.then(
-        (value) => {
-          pass({
-            status: 'resolved',
-            value,
-          })
-        },
-        (reason) => {
-          pass({
-            status: 'rejected',
-            value: reason
-          })
-        }
-      )
-    }
-  }).chain(expectProperties({
-    status: expectExactly('resolved'),
-    value: expected
-  }))
+export const ancestorPresence = path => {
+	const findAncestor = (trace, index) => {
+		const expectedParentName = path[index]
+		const traceParent = trace.getParentTrace()
+		if (traceParent.getName() !== expectedParentName) {
+			return null
+		}
+		if (index === path.length - 1) {
+			return traceParent
+		}
+		return findAncestor(traceParent, index + 1)
+	}
+
+	return createExpectation({
+		compare: ({ trace, fail, pass }) => {
+			const ancestor = findAncestor(trace, 0)
+			if (ancestor === null) {
+				return fail()
+			}
+			return pass(ancestor)
+		},
+	})
 }
-*/
+
+const getOwnNames = value =>
+	Object.getOwnPropertyNames(value).concat(Object.getOwnPropertySymbols(value))
+
+export const propertiesMatch = expected => {
+	const createExpectedPropertiesExpectation = (expected, trace) => {
+		const expectedNames = getOwnNames(expected)
+		const first = createExpectation({})
+		return expectedNames.reduce((memo, name) => {
+			const expectedPropertyValue = expected[name]
+			let propertyValueExpectation
+			if (isFactoryOf(createExpectation, expectedPropertyValue)) {
+				propertyValueExpectation = expectedPropertyValue
+			} else {
+				const expectedReference = getTraceReference(trace, expected)
+				if (expectedReference) {
+					const ancestorValueExpectation = createExpectation({
+						compare: ({ trace, actual, fail, pass }) => {
+							if (trace.getParentTrace().actual !== actual) {
+								return fail()
+							}
+							return pass()
+						},
+					})
+					propertyValueExpectation = ancestorPresence(expected).chain(ancestorValueExpectation)
+				} else if (canHaveOwnProperty(expected)) {
+					propertyValueExpectation = createExpectedPropertiesExpectation(expected)
+				} else {
+					propertyValueExpectation = exactly(expected)
+				}
+			}
+
+			return memo.chain(propertyPresence(name)).chain(propertyValueExpectation)
+		}, first)
+	}
+
+	const createActualPropertiesExpectation = () => {
+		return createExpectation({
+			compare: ({ actual, expected, fail, pass }) => {
+				const actualPropertyNames = getOwnNames(actual)
+				const extraPropertyName = actualPropertyNames.find(
+					name =>
+						name in expected === false &&
+						Object.getOwnPropertyDescriptor(actual, name).enumerable === true,
+				)
+				// hum ça aussi faut qu'on le chain lorsqu'on a un truc récursif
+				if (extraPropertyName) {
+					return fail()
+				}
+				return pass()
+			},
+		})
+	}
+
+	return createExpectedPropertiesExpectation(expected, createAnonymousTrace(expected)).chain(
+		createActualPropertiesExpectation(),
+	)
+}
+
+export const aThenableResolvedWith = expected => {
+	return createExpectation({
+		expected,
+		compare: ({ actual, pass }) => {
+			actual.then(
+				value => {
+					pass({
+						status: "resolved",
+						value,
+					})
+				},
+				reason => {
+					pass({
+						status: "rejected",
+						value: reason,
+					})
+				},
+			)
+		},
+	}).chain(
+		propertiesMatch({
+			status: exactly("resolved"),
+			value: expected,
+		}),
+	)
+}
 
 /*
-expectProperties({ foo: expectExactly(true) })
-
-const expectProperties = (expected) => {
-  // le concept de trace continue d'exister
-  // il faut voir comment on l'implémente ici
-  const expectedNames = Object.getOwnPropertyNames(expected).concat(Object.getOwnPropertySymbols(expected))
-  // ici il faut utiliser chain pour qu'on puisse inspecter trace et trouver une éventuelle
-  // précédente trace utilisant actual ou expected
-  // donc on va créer des property expectation sur la valeur de expected
-  // puis si on trouve des pointeurs dans la trace expected bien indiquer qu'on s'attends
-  // à trouver un pointeur
-
-  reutrn expectAll(
-    ...expectedNames(name => createExpectation({
-      compare: ({ actual, expected, fail, pass }) => {
-
-      }
-    })
-  )
-*/
-
-/*
-callExpecting(expectExactly(10))
+aFunctionWhich(...expectations)
 
 const findCallExpectations = (value) => {
   // en gros il faut que chaque expectation expose qui elle est
@@ -144,7 +213,7 @@ const findCallExpectations = (value) => {
   // pour le moment cela ignorerais tout simplement les expectation qui ne sont pas des callExpectation
 }
 
-const callExpecting = (expected) => {
+const aFunctionWhich = (expected) => {
   const callExpectations = findCallExpectations(expected)
 
   return createExpectation({ actual, expected, pass, fail }) => {
@@ -160,4 +229,4 @@ const callExpecting = (expected) => {
 })
 */
 
-export const assert = (actual, expectation) => expectation.match(actual)
+export const expect = (actual, matcher) => matcher.match(actual)
