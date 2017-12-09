@@ -28,22 +28,22 @@ export default createTest({
 	"called without argument": ({ pass }) => {
 		assert.throws(
 			() => propertiesMatch(),
-			e => e.message === `propertiesMatching must be called with one argument, got 0`,
+			e => e.message === `must be called with one argument, got 0`,
 		)
 		assert.throws(
 			() => strictPropertiesMatch(),
-			e => e.message === `strictPropertiesMatching must be called with one argument, got 0`,
+			e => e.message === `must be called with one argument, got 0`,
 		)
 		pass()
 	},
 	"called with 2 argument": ({ pass }) => {
 		assert.throws(
 			() => propertiesMatch(true, true),
-			e => e.message === `propertiesMatching must be called with one argument, got 2`,
+			e => e.message === `must be called with one argument, got 2`,
 		)
 		assert.throws(
 			() => strictPropertiesMatch(true, true),
-			e => e.message === `strictPropertiesMatching must be called with one argument, got 2`,
+			e => e.message === `must be called with one argument, got 2`,
 		)
 		pass()
 	},
@@ -212,15 +212,11 @@ export default createTest({
 			}
 		}
 
-		assertFailure(
-			propertiesMatch,
-			createNestedMissingProperty,
-			"expect bar property on value foo but missing",
-		)
+		assertFailure(propertiesMatch, createNestedMissingProperty, "missing bar property on value foo")
 		assertFailure(
 			strictPropertiesMatch,
 			createNestedMissingProperty,
-			"expect bar property on value foo but missing",
+			"missing bar property on value foo",
 		)
 		pass()
 	},
@@ -280,12 +276,12 @@ export default createTest({
 		assertFailure(
 			propertiesMatch,
 			createMissingNestedCircularStructure,
-			"expect value foo aaa to be a circular reference but got an object",
+			"expect value foo aaa to be a pointer to value but got an object",
 		)
 		assertFailure(
 			strictPropertiesMatch,
 			createMissingNestedCircularStructure,
-			"expect value foo aaa to be a circular reference but got an object",
+			"expect value foo aaa to be a pointer to value but got an object",
 		)
 		pass()
 	},
@@ -314,7 +310,7 @@ export default createTest({
 		assertFailure(
 			strictPropertiesMatch,
 			createExtraNestedCircularStructure,
-			`expect value foo aaa to be an object but got a circular reference`,
+			`expect value foo aaa to be an object but got a pointer to value`,
 		)
 		pass()
 	},
@@ -386,12 +382,12 @@ export default createTest({
 		assertFailure(
 			propertiesMatch,
 			createNestedMissingHiddenProperty,
-			"expect bar property on value foo but missing",
+			"missing bar property on value foo",
 		)
 		assertFailure(
 			strictPropertiesMatch,
 			createNestedMissingHiddenProperty,
-			"expect bar property on value foo but missing",
+			"missing bar property on value foo",
 		)
 		pass()
 	},

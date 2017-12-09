@@ -46,7 +46,7 @@ export const hasProperty = (value, propertyName) => {
 	return hasProperty(valuePrototype, propertyName)
 }
 
-export const getOwnPropertyNames = value => {
+export const getOwnPropertyNamesAndSymbols = value => {
 	if (canHaveOwnProperty(value)) {
 		return Object.getOwnPropertyNames(value).concat(Object.getOwnPropertySymbols(value))
 	}

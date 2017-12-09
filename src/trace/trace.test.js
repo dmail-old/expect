@@ -1,4 +1,4 @@
-import { createTraceFrom } from "./trace.js"
+import { createAnonymousTrace, getPointerFromTrace, comparePointer } from "./trace.js"
 import { createTest } from "@dmail/test"
 import assert from "assert"
 
@@ -7,41 +7,39 @@ export const test = createTest({
 		const value = {
 			foo: true,
 		}
-		const trace = createTraceFrom(value)
+		const trace = createAnonymousTrace(value)
 		assert.equal(trace.getDepth(), 0)
 		assert.equal(trace.getName(), "value")
 		assert.equal(trace.getParentTrace(), null)
+		assert.equal(trace.getPreviousTrace(), null)
 		assert.equal(trace.getValue(), value)
 
-		assert.equal(trace.getFirstTraceFor(value), trace)
-		assert.equal(trace.getFirstTraceFor(true), null)
-		assert.equal(trace.getFirstTraceFor(undefined), null)
+		assert.deepEqual(getPointerFromTrace(trace, value), null)
+		assert.deepEqual(getPointerFromTrace(trace, true), null)
+		assert.deepEqual(getPointerFromTrace(trace, undefined), null)
 
-		const fooTrace = trace.traceProperty("foo")
+		const fooTrace = trace.discoverProperty("foo")
 		assert.equal(fooTrace.getDepth(), 1)
 		assert.equal(fooTrace.getName(), "foo")
 		assert.equal(fooTrace.getParentTrace(), trace)
+		assert.equal(fooTrace.getPreviousTrace(), trace)
 		assert.equal(fooTrace.getValue(), true)
 
-		assert.equal(fooTrace.getFirstTraceFor(value), trace)
-		assert.equal(fooTrace.getFirstTraceFor(true), fooTrace)
-		assert.equal(fooTrace.getFirstTraceFor(undefined), null)
+		assert.deepEqual(getPointerFromTrace(fooTrace, value), [trace])
+		assert.deepEqual(getPointerFromTrace(fooTrace, true), null)
+		assert.deepEqual(getPointerFromTrace(fooTrace, undefined), null)
 
 		// a part of the concept is to support abstract property (a property which is not set)
-		const barTrace = trace.traceProperty("bar")
+		const barTrace = trace.discoverProperty("bar")
 		assert.equal(barTrace.getDepth(), 1)
 		assert.equal(barTrace.getName(), "bar")
 		assert.equal(barTrace.getParentTrace(), trace)
+		assert.equal(barTrace.getPreviousTrace(), fooTrace)
 		assert.equal(barTrace.getValue(), undefined)
 
-		assert.equal(barTrace.getFirstTraceFor(value), trace)
-		assert.equal(barTrace.getFirstTraceFor(true), fooTrace)
-		assert.equal(barTrace.getFirstTraceFor(undefined), barTrace)
-
-		// history is mutate so trace is know awar of fooTrace & barTrace
-		assert.equal(trace.getFirstTraceFor(value), trace)
-		assert.equal(trace.getFirstTraceFor(true), fooTrace)
-		assert.equal(trace.getFirstTraceFor(undefined), barTrace)
+		assert.deepEqual(getPointerFromTrace(barTrace, value), [trace])
+		assert.deepEqual(getPointerFromTrace(barTrace, true), [fooTrace])
+		assert.deepEqual(getPointerFromTrace(barTrace, undefined), null)
 
 		pass()
 	},
@@ -49,10 +47,10 @@ export const test = createTest({
 		const value = {}
 		value.parent = value
 
-		const trace = createTraceFrom(value)
-		const parentTrace = trace.traceProperty("parent")
+		const trace = createAnonymousTrace(value)
+		const parentTrace = trace.discoverProperty("parent")
 
-		assert.equal(parentTrace.getReference(), trace)
+		assert.deepEqual(getPointerFromTrace(parentTrace), [trace])
 		pass()
 	},
 	"trace on value with circular nested reference": ({ pass }) => {
@@ -60,10 +58,70 @@ export const test = createTest({
 			foo: {},
 		}
 		value.foo.self = value.foo
-		const trace = createTraceFrom(value)
-		const fooTrace = trace.traceProperty("foo")
-		const selfTrace = fooTrace.traceProperty("self")
-		assert.equal(selfTrace.getReference(), fooTrace)
+		const trace = createAnonymousTrace(value)
+		const fooTrace = trace.discoverProperty("foo")
+		const selfTrace = fooTrace.discoverProperty("self")
+		assert.deepEqual(getPointerFromTrace(selfTrace), [fooTrace])
+		pass()
+	},
+	"comparePointer matching names": ({ pass }) => {
+		const expected = {}
+		expected.parent = expected
+		const actual = {}
+		actual.parent = actual
+
+		const expectedTrace = createAnonymousTrace(expected).discoverProperty("parent")
+		const actualTrace = createAnonymousTrace(actual).discoverProperty("parent")
+		const expectedPointer = getPointerFromTrace(expectedTrace, expected)
+		const actualPointer = getPointerFromTrace(actualTrace, actual)
+
+		assert.equal(comparePointer(expectedPointer, actualPointer), true)
+
+		pass()
+	},
+	"comparePointer names mismatch": ({ pass }) => {
+		const expected = {
+			foo: {},
+		}
+		expected.foo.parent = expected
+		const actual = {
+			bar: {},
+		}
+		actual.bar.parent = actual
+
+		const expectedTrace = createAnonymousTrace(expected)
+			.discoverProperty("foo")
+			.discoverProperty("parent")
+		const actualTrace = createAnonymousTrace(actual)
+			.discoverProperty("bar")
+			.discoverProperty("parent")
+		const expectedPointer = getPointerFromTrace(expectedTrace, expected)
+		const actualPointer = getPointerFromTrace(actualTrace, actual)
+
+		assert.equal(comparePointer(expectedPointer, actualPointer), false)
+		pass()
+	},
+	"comparePointer depth mismatch": ({ pass }) => {
+		// c'est un peu plsu compliqué, en gros les noms matchs par la structure mais
+		// on est pas au même endroit
+		const expected = {
+			foo: true,
+		}
+		expected.bar = expected
+		const actual = {
+			foo: {},
+		}
+		expected.foo.bar = actual
+		const expectedRootTrace = createAnonymousTrace(expected)
+		expectedRootTrace.discoverProperty("foo")
+		const expectedTrace = expectedRootTrace.discoverProperty("bar")
+		const actualTrace = createAnonymousTrace(actual)
+			.discoverProperty("foo")
+			.discoverProperty("bar")
+		const expectedPointer = getPointerFromTrace(expectedTrace, expected)
+		const actualPointer = getPointerFromTrace(actualTrace, actual)
+
+		assert.equal(comparePointer(expectedPointer, actualPointer), false)
 		pass()
 	},
 })

@@ -1,52 +1,31 @@
 import { hasProperty } from "./helper.js"
-import { isTrace, createNamedTrace } from "./trace/trace.js"
-import { createAction, fromFunction, isAction } from "@dmail/action"
-import { uneval } from "@dmail/uneval"
-
-const getValueNameFromTrace = ({ getName, getParentTrace }) => {
-	const name = getName()
-	const parentTrace = getParentTrace()
-	if (parentTrace === null) {
-		// I want to improve failure message event more could improve log even more by transforming
-		// "expect value 0 to be an object"
-		// into
-		// "expect anonymous spy first call first argument to be an object"
-		// thanks to this trace api and maybe a bit more work I'll be able to do that
-		// I must first end the other apis, especially the ones around spy
-		// to see more clearly how we can transform "0" into "first argument"
-		return name
-	}
-	// we do String(valueName) in case valueName is a symbol
-	// to avoid Cannot convert a Symbol value to a string error
-	return `${getValueNameFromTrace(parentTrace)} ${String(name)}`
-}
-
-export const createFailureMessage = ({ type, trace, expected, actual }) => {
-	if (type === "unexpected-resolved-value") {
-		return `expect ${getValueNameFromTrace(
-			trace.getParentTrace(),
-		)} to reject but it resolved with ${uneval(actual)}`
-	}
-	return `expect ${getValueNameFromTrace(trace)} to match ${uneval(expected)}`
-}
+import { createAction, isAction } from "@dmail/action"
 
 const matchSymbol = Symbol()
 
 export const isMatcher = value => hasProperty(value, matchSymbol)
 
+const spaceWhenDefined = value => {
+	if (value) {
+		return `${value} `
+	}
+	return ""
+}
+
 const defaultCreateSignatureMessage = ({ name, type, args }) => {
 	if (type === "missing") {
-		return `${name} must be called with one argument but was called without. You can use ${
-			name
-		}(any())`
+		return `${spaceWhenDefined(
+			name,
+		)}must be called with one argument but was called without. You can use any()`
 	}
-	return `${name} must be called with one argument but was called with ${args.length}`
+	return `${spaceWhenDefined(name)}must be called with one argument but was called with ${
+		args.length
+	}`
 }
 
 export const createMatcher = ({
 	match,
 	name = match.name,
-	valueName = "value",
 	createBadSignatureMessage = defaultCreateSignatureMessage,
 }) => {
 	const matcher = (...args) => {
@@ -73,54 +52,25 @@ export const createMatcher = ({
 
 		const [expected] = args
 
-		const expectation = actual => {
-			const trace = isTrace(actual)
-				? actual
-				: createNamedTrace(
-						{
-							actual,
-							expected,
-						},
-						valueName,
-					)
-			actual = trace.getValue().actual
+		const assert = actual => {
 			const action = createAction()
-			const pass = () => action.pass()
-			const fail = data =>
-				action.fail({
-					actual,
-					expected,
-					trace,
-					...data,
-				})
+			const pass = data => action.pass(data)
+			const fail = data => action.fail(data)
 
 			const returnValue = match({
-				trace,
-				expected,
 				actual,
-				pass,
+				expected,
 				fail,
+				pass,
 			})
 
-			if (isMatcher(returnValue)) {
-				const expectation = returnValue(expected)
-				const assertion = expectation(trace)
-				assertion.then(pass, fail)
-			} else if (isAction(returnValue)) {
+			if (isAction(returnValue)) {
 				returnValue.then(pass, fail)
 			}
 
-			return action.then(
-				() => undefined,
-				failure => {
-					if (trace === failure.trace) {
-						return createFailureMessage(failure)
-					}
-					return failure
-				},
-			)
+			return action
 		}
-		return expectation
+		return assert
 	}
 	matcher[matchSymbol] = true
 	return matcher
@@ -141,21 +91,6 @@ export const createPassedMatcher = value => {
 export const createMatcherFromFunction = fn => {
 	return createMatcher({
 		match: fn,
-	})
-}
-
-export const createMatcherDiscovering = (discoverer, matcher) => {
-	return createMatcherFromFunction(({ trace, actual }) => {
-		fromFunction(() => discoverer(actual)).then(({ name, value, pass, fail }) => {
-			const discoveredTrace = trace.discover(
-				{
-					actual: value,
-					expected: matcher,
-				},
-				name,
-			)
-			matcher(matcher)(discoveredTrace).then(pass, fail)
-		})
 	})
 }
 
