@@ -2,8 +2,10 @@ import { hasProperty } from "./helper.js"
 import { createAction, isAction } from "@dmail/action"
 
 const matchSymbol = Symbol()
+const assertSymbol = Symbol()
 
 export const isMatcher = value => hasProperty(value, matchSymbol)
+export const isAssertion = value => hasProperty(value, assertSymbol)
 
 const spaceWhenDefined = value => {
 	if (value) {
@@ -14,13 +16,9 @@ const spaceWhenDefined = value => {
 
 const defaultCreateSignatureMessage = ({ name, type, args }) => {
 	if (type === "missing") {
-		return `${spaceWhenDefined(
-			name,
-		)}must be called with one argument but was called without. You can use any()`
+		return `${spaceWhenDefined(name)}must be called with one argument, got 0`
 	}
-	return `${spaceWhenDefined(name)}must be called with one argument but was called with ${
-		args.length
-	}`
+	return `${spaceWhenDefined(name)}must be called with one argument, got ${args.length}`
 }
 
 export const createMatcher = ({
@@ -70,6 +68,8 @@ export const createMatcher = ({
 
 			return action
 		}
+		assert[assertSymbol] = true
+
 		return assert
 	}
 	matcher[matchSymbol] = true

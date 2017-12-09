@@ -1,15 +1,12 @@
 import { createMatcherFromFunction } from "../matcher.js"
 import { uneval } from "@dmail/uneval"
 
-const createExactlyFailureMessage = (actual, expected) =>
+const createExactlyFailureMessage = (expected, actual) =>
 	`expect ${uneval(expected)} but got ${uneval(actual)}`
 
 export const exactly = createMatcherFromFunction(({ expected, actual, fail, pass }) => {
 	if (actual === expected) {
 		return pass()
 	}
-	return fail({
-		type: "exactly",
-		message: createExactlyFailureMessage(actual, expected),
-	})
+	return fail(createExactlyFailureMessage(expected, actual))
 })

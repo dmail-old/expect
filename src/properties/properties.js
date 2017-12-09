@@ -1,5 +1,5 @@
 import { sequence, passed, failed } from "@dmail/action"
-import { isMatcher, createMatcherFromFunction } from "../matcher.js"
+import { isAssertion, createMatcherFromFunction } from "../matcher.js"
 import { exactly } from "../exactly/exactly.js"
 import { canHaveOwnProperty, getOwnPropertyNamesAndSymbols, hasProperty } from "../helper.js"
 import { createAnonymousTrace, getPointerFromTrace, comparePointer } from "../trace/trace.js"
@@ -20,9 +20,8 @@ const getPointerName = pointer => {
 	return pointer
 		.reverse()
 		.slice(0, -1)
-		.reduce((name, trace) => {
-			return `${name} ${String(trace.getName())}`
-		}, "")
+		.map(trace => String(trace.getName()))
+		.join(" ")
 }
 
 const failureMessageCreators = {
@@ -35,7 +34,7 @@ const failureMessageCreators = {
 		return `${getValueNameFromTrace(expectedTrace)} mismatch: ${message}`
 	},
 	"missing-pointer": ({ expectedTrace, expectedPointer, actual }) => {
-		return `expect ${getValueNameFromTrace(expectedTrace)} to be a pointer on ${getPointerName(
+		return `expect ${getValueNameFromTrace(expectedTrace)} to be a pointer to ${getPointerName(
 			expectedPointer,
 		)} but got ${prefixValue(actual)}`
 	},
@@ -45,9 +44,9 @@ const failureMessageCreators = {
 		)} but got a pointer to ${getPointerName(actualPointer)}`
 	},
 	"pointer-mismatch": ({ expectedTrace, expectedPointer, actualPointer }) => {
-		return `expect ${getValueNameFromTrace(expectedTrace)} to be a pointer on ${getPointerName(
+		return `expect ${getValueNameFromTrace(expectedTrace)} to be a pointer to ${getPointerName(
 			expectedPointer,
-		)} but got a pointer on ${getPointerName(actualPointer)}`
+		)} but got a pointer to ${getPointerName(actualPointer)}`
 	},
 	"unexpected-property": ({ expectedTrace, name }) => {
 		return `unexpected property ${name} on ${getValueNameFromTrace(expectedTrace)}`
@@ -58,9 +57,7 @@ const propertyIsEnumerable = (object, name) => {
 	return Object.prototype.propertyIsEnumerable.call(object, name)
 }
 
-const compareProperties = options => {
-	const { allowExtra, extraMustBeEnumerable } = options
-
+const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 	const createPropertiesMatcher = ({
 		actualTrace: actualOwnerTrace,
 		expectedTrace: expectedOwnerTrace,
@@ -78,10 +75,11 @@ const compareProperties = options => {
 					expectedTrace,
 				})
 			}
+
 			const actual = actualTrace.getValue()
 			const expected = expectedTrace.getValue()
 
-			if (isMatcher(expected)) {
+			if (isAssertion(expected)) {
 				return expected(actual).then(null, message =>
 					failed({
 						type: "mismatch",
@@ -93,6 +91,7 @@ const compareProperties = options => {
 
 			const expectedCanHaveOwnProperty = canHaveOwnProperty(expected)
 			const actualCanHaveOwnProperty = canHaveOwnProperty(actual)
+
 			if (
 				expectedCanHaveOwnProperty !== actualCanHaveOwnProperty ||
 				expectedCanHaveOwnProperty === false
@@ -152,7 +151,7 @@ const compareProperties = options => {
 					if (hasProperty(expectedOwner, name)) {
 						return false
 					}
-					if (extraMustBeEnumerable && propertyIsEnumerable(actualOwner, name)) {
+					if (extraMustBeEnumerable && propertyIsEnumerable(actualOwner, name) === false) {
 						return false
 					}
 					return true
@@ -177,16 +176,16 @@ const compareProperties = options => {
 	}
 }
 
-export const propertiesMatch = createMatcherFromFunction(
+export const exactProperties = createMatcherFromFunction(
 	compareProperties({
-		allowExtra: true,
+		allowExtra: false,
 		extraMustBeEnumerable: true,
 	}),
 )
 
-export const strictPropertiesMatch = createMatcherFromFunction(
+export const theseProperties = createMatcherFromFunction(
 	compareProperties({
-		allowExtra: false,
+		allowExtra: true,
 		extraMustBeEnumerable: true,
 	}),
 )

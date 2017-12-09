@@ -111,7 +111,7 @@ export const test = createTest({
 		const actual = {
 			foo: {},
 		}
-		expected.foo.bar = actual
+		actual.foo.bar = actual
 		const expectedRootTrace = createAnonymousTrace(expected)
 		expectedRootTrace.discoverProperty("foo")
 		const expectedTrace = expectedRootTrace.discoverProperty("bar")

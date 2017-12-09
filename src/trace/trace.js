@@ -3,13 +3,16 @@ import { createFactory, isFactoryOf } from "@dmail/mixin"
 const createTrace = createFactory(
 	({ getParentTrace, getPreviousTrace, name, value, lastValueOf }) => {
 		const isFirst = () => getPreviousTrace() === null
-		const getDepth = () => (getParentTrace ? getParentTrace.getDepth() + 1 : 0)
+		const getDepth = () => {
+			const parentTrace = getParentTrace()
+			return parentTrace ? parentTrace.getDepth() + 1 : 0
+		}
 		const getName = () => name
 		const getValue = () => value
 		let lastPropertyTrace
 		const discoverProperty = name => {
 			const parentTrace = lastValueOf()
-			const previousPropertyTrace = lastPropertyTrace
+			const previousPropertyTrace = lastPropertyTrace || parentTrace
 
 			lastPropertyTrace = createTrace({
 				getParentTrace: () => parentTrace,
@@ -35,6 +38,7 @@ export const isTrace = value => isFactoryOf(createTrace, value)
 
 export const createNamedTrace = (value, name) => {
 	return createTrace({
+		getParentTrace: () => null,
 		getPreviousTrace: () => null,
 		name,
 		value,
@@ -54,10 +58,17 @@ export const getPointerFromTrace = (
 	const previousTracePointer = []
 
 	let previousTrace = trace.getPreviousTrace()
+	let siblingTrace = trace
 	while (previousTrace) {
-		previousTracePointer.push(previousTrace)
-		if ((compare(getter(previousTrace)), value)) {
+		const previousTraceMatch = compare(getter(previousTrace), value)
+
+		if (previousTraceMatch) {
+			previousTracePointer.push(previousTrace)
 			return previousTracePointer
+		}
+		if (previousTrace.getDepth() < siblingTrace.getDepth()) {
+			siblingTrace = previousTrace
+			previousTracePointer.push(previousTrace)
 		}
 		previousTrace = previousTrace.getPreviousTrace()
 	}
@@ -74,9 +85,9 @@ export const comparePointer = (pointerA, pointerB) => {
 		if (pointerATrace.getName() !== pointerBTrace.getName()) {
 			return false
 		}
-		if (pointerATrace.getDepth() !== pointerBTrace.getDepth()) {
-			return false
-		}
+		// if (pointerATrace.getDepth() !== pointerBTrace.getDepth()) {
+		// 	return false
+		// }
 		return true
 	})
 }
