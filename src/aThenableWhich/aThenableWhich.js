@@ -1,11 +1,11 @@
-import { createMatcher, createMatcherFromFunction } from "../matcher.js"
-import { matchAll } from "../matchAll/matchAll.js"
+import { createMatcherFromFunction } from "../matcher.js"
 import { fromPromise, passed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
-import { hasProperty } from "../helper"
-import { prefixValue } from "../any/any.js"
+import { hasProperty } from "../helper.js"
+import { oneAllowedBehaviourSignature } from "../behaviourSignature.js"
+import { any, prefixValue } from "../any/any.js"
 
-export const resolvesWith = createMatcherFromFunction(({ expected, actual, fail }) => {
+export const resolveWith = createMatcherFromFunction(({ expected, actual, fail }) => {
 	const { status, value } = actual
 	if (status === "rejected") {
 		return fail(`unexpected reject with ${uneval(value)} on thenable`)
@@ -15,20 +15,20 @@ export const resolvesWith = createMatcherFromFunction(({ expected, actual, fail 
 	})
 })
 
-export const rejectsWith = createMatcherFromFunction(({ expected, actual, fail }) => {
+export const rejectWith = createMatcherFromFunction(({ expected, actual, fail }) => {
 	const { status, value } = actual
 	if (status === "resolved") {
 		return fail(`unexpected resolve with ${uneval(value)} on thenable`)
 	}
 	return expected(value).then(null, message => {
-		return `resolved value mismatch: ${message}`
+		return `rejected value mismatch: ${message}`
 	})
 })
 
-export const aThenableWhich = (...args) => {
-	// les seuls argument autorisé ici sont resolvesWith et rejectsWith
-	return createMatcher({
-		match: ({ actual, fail }) => {
+export const aThenableWhich = oneAllowedBehaviourSignature(
+	[resolveWith, rejectWith, any],
+	behaviour => {
+		return createMatcherFromFunction(({ expected, actual, fail }) => {
 			if (actual === null || (typeof actual !== "object" && typeof actual !== "function")) {
 				return fail(`expect a thenable but got ${prefixValue(actual)}`)
 			}
@@ -54,7 +54,7 @@ export const aThenableWhich = (...args) => {
 							value: reason,
 						}),
 				)
-				.then(meta => matchAll(...args)(meta))
-		},
-	})
-}
+				.then(meta => expected(meta))
+		})(behaviour)
+	},
+)

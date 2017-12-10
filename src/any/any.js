@@ -37,35 +37,32 @@ export const prefix = type => {
 
 export const prefixValue = value => prefix(getConstructorName(value))
 
-const createFailedConstructorMessage = (actual, expected) =>
+const createFailedConstructorMessage = (expected, actual) =>
 	`expect ${prefix(expected)} but got ${prefix(actual)}`
 
-export const matchConstructorName = expectedConstructorName => {
-	return createMatcher(({ actual, fail, pass }) => {
-		const actualConstructorName = getConstructorName(actual.getValue())
-		if (actualConstructorName === expectedConstructorName) {
+export const constructorName = createMatcher(({ expected, actual, fail, pass }) => {
+	const actualConstructorName = getConstructorName(actual)
+	if (actualConstructorName === expected) {
+		return pass()
+	}
+	return fail(createFailedConstructorMessage(expected, actualConstructorName, actual))
+})
+
+export const constructedBy = createMatcher({
+	match: ({ expected, actual }) => {
+		return constructorName(expected.name)(actual)
+	},
+})
+
+export const constructedByFromValue = expectedValue =>
+	constructedBy(getConstructorName(expectedValue))
+
+export const any = createMatcher({
+	name: "any",
+	match: ({ expected, actual, pass }) => {
+		if (expected === undefined) {
 			return pass()
 		}
-		return fail({
-			type: "constructor-mismatch",
-			message: createFailedConstructorMessage(
-				actualConstructorName,
-				expectedConstructorName,
-				actual.getValue(),
-			),
-		})
-	})
-}
-
-export const matchConstructedBy = expectedConstructor =>
-	matchConstructorName(expectedConstructor.name)
-
-export const matchConstructedByFromValue = expectedValue =>
-	matchConstructedBy(getConstructorName(expectedValue))
-
-export const any = expectedConstructor => {
-	if (expectedConstructor === undefined) {
-		return createMatcher(({ pass }) => pass())
-	}
-	return matchConstructedBy(expectedConstructor)
-}
+		return constructedBy(expected)(actual)
+	},
+})

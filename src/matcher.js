@@ -1,5 +1,6 @@
 import { hasProperty } from "./helper.js"
 import { createAction, isAction } from "@dmail/action"
+import { oneArgumentSignature } from "./signature"
 
 const matchSymbol = Symbol()
 const assertSymbol = Symbol()
@@ -7,50 +8,9 @@ const assertSymbol = Symbol()
 export const isMatcher = value => hasProperty(value, matchSymbol)
 export const isAssertion = value => hasProperty(value, assertSymbol)
 
-const spaceWhenDefined = value => {
-	if (value) {
-		return `${value} `
-	}
-	return ""
-}
-
-const defaultCreateSignatureMessage = ({ name, type, args }) => {
-	if (type === "missing") {
-		return `${spaceWhenDefined(name)}must be called with one argument, got 0`
-	}
-	return `${spaceWhenDefined(name)}must be called with one argument, got ${args.length}`
-}
-
-export const createMatcher = ({
-	match,
-	name = match.name,
-	createBadSignatureMessage = defaultCreateSignatureMessage,
-}) => {
-	const matcher = (...args) => {
-		if (args.length === 0) {
-			throw new Error(
-				createBadSignatureMessage({
-					type: "missing",
-					name,
-					args,
-					fallback: defaultCreateSignatureMessage,
-				}),
-			)
-		}
-		if (args.length > 1) {
-			throw new Error(
-				createBadSignatureMessage({
-					type: "extra",
-					name,
-					args,
-					fallback: defaultCreateSignatureMessage,
-				}),
-			)
-		}
-
-		const [expected] = args
-
-		const assert = actual => {
+export const createMatcher = ({ match, name }) => {
+	const matcher = oneArgumentSignature(expected => {
+		const assert = oneArgumentSignature(actual => {
 			const action = createAction()
 			const pass = data => action.pass(data)
 			const fail = data => action.fail(data)
@@ -67,30 +27,24 @@ export const createMatcher = ({
 			}
 
 			return action
-		}
+		})
 		assert[assertSymbol] = true
+		assert.matcher = matcher
+		assert.name = name
 
 		return assert
-	}
+	})
 	matcher[matchSymbol] = true
+	matcher.name = name
 	return matcher
 }
 
-export const createFailedMatcher = value => {
-	return createMatcher({
-		match: ({ fail }) => fail(value),
-	})
-}
+export const isMatcherOf = (matcher, value) => isAssertion(value) && value.matcher === matcher
 
-export const createPassedMatcher = value => {
-	return createMatcher({
-		match: ({ pass }) => pass(value),
-	})
-}
-
-export const createMatcherFromFunction = fn => {
+export const createMatcherFromFunction = (fn, name) => {
 	return createMatcher({
 		match: fn,
+		name: name || fn.name,
 	})
 }
 
