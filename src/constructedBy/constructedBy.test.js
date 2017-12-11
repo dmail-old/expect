@@ -1,4 +1,4 @@
-import { any } from "./any.js"
+import { constructedBy } from "./constructedBy.js"
 import { createTest } from "@dmail/test"
 import assert from "assert"
 
@@ -15,29 +15,17 @@ const assertFailedWith = (action, value) => {
 const CustomConstructor = function() {}
 
 export default createTest({
-	"any()() must pass": ({ pass }) => {
-		assertPassedWith(any()())
-		pass()
-	},
-	"any()(undefined) must pass": ({ pass }) => {
-		assertPassedWith(any()(undefined))
-		pass()
-	},
-	"any()({}) must pass": ({ pass }) => {
-		assertPassedWith(any()({}))
-		pass()
-	},
 	"any(undefined)()": ({ pass }) => {
-		assertPassedWith(any(undefined)({}))
+		assertPassedWith(constructedBy(undefined)({}))
 		pass()
 	},
 	"any(CustomConstructor)(new CustomConstructor)": ({ pass }) => {
-		assertPassedWith(any(CustomConstructor)(new CustomConstructor()))
+		assertPassedWith(constructedBy(CustomConstructor)(new CustomConstructor()))
 		pass()
 	},
 	"any(CustomConstructor)(Object.create(null))": ({ pass }) => {
 		assertFailedWith(
-			any(CustomConstructor)(Object.create(null)),
+			constructedBy(CustomConstructor)(Object.create(null)),
 			"expect a customConstructor but got an object",
 		)
 		pass()
@@ -45,7 +33,7 @@ export default createTest({
 	"any(Object) with an anonymous constructor": ({ pass }) => {
 		const objectWithAnonymousConstructor = {}
 		objectWithAnonymousConstructor.constructor = function() {}
-		assertPassedWith(any(Object)(objectWithAnonymousConstructor))
+		assertPassedWith(constructedBy(Object)(objectWithAnonymousConstructor))
 		pass()
 	},
 })

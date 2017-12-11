@@ -5,15 +5,15 @@ import { oneArgumentSignature } from "./signature"
 const matchSymbol = Symbol()
 const assertSymbol = Symbol()
 
-export const isMatcher = value => hasProperty(value, matchSymbol)
-export const isAssertion = value => hasProperty(value, assertSymbol)
+export const isMatcher = (value) => hasProperty(value, matchSymbol)
+export const isAssertion = (value) => hasProperty(value, assertSymbol)
 
 export const createMatcher = ({ match, name }) => {
-	const matcher = oneArgumentSignature(expected => {
-		const assert = oneArgumentSignature(actual => {
+	const matcher = oneArgumentSignature((expected) => {
+		const assert = oneArgumentSignature((actual) => {
 			const action = createAction()
-			const pass = data => action.pass(data)
-			const fail = data => action.fail(data)
+			const pass = (data) => action.pass(data)
+			const fail = (data) => action.fail(data)
 
 			const returnValue = match({
 				actual,
@@ -47,34 +47,3 @@ export const createMatcherFromFunction = (fn, name) => {
 		name: name || fn.name,
 	})
 }
-
-// const createPropertiesFailureMessage = ({ type, trace, data }) => {
-// 	if (type === "extra-recursion") {
-// 		return `expect ${getValueNameFromTrace(trace)} to be ${prefixValue(
-// 			trace.getExpected(),
-// 		)} but got a circular reference`
-// 	}
-// 	if (type === "missing-recursion") {
-// 		return `expect ${getValueNameFromTrace(trace)} to be a circular reference but got ${prefixValue(
-// 			trace.getActual(),
-// 		)}`
-// 	}
-// 	if (type === "extra") {
-//		const actualReference = trace.actual.getReference()
-//		if (actualReference) {
-//			// retourne un autre message pour dire qu'on a une unexpected recursion
-//			// mais en fait on s'en moque c'est juste une unexpected property ici
-//		}
-// 		return `unexpected ${trace.getName()} property on ${getValueNameFromTrace(
-// 			trace.getParentTrace(),
-// 		)}`
-// 	}
-// 	if (type === "missing") {
-// 		return `expect ${trace.getName()} property on ${getValueNameFromTrace(
-// 			trace.getParentTrace(),
-// 		)} but missing`
-// 	}
-// 	if (type === "mismatch") {
-// 		return `${getValueNameFromTrace(trace)} mismatch: ${data}`
-// 	}
-// }

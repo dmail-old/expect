@@ -1,9 +1,9 @@
 import { sequence, passed, failed } from "@dmail/action"
 import { isAssertion, createMatcherFromFunction } from "../matcher.js"
-import { exactly } from "../exactly/exactly.js"
+import { is } from "../is/is.js"
 import { canHaveOwnProperty, getOwnPropertyNamesAndSymbols, hasProperty } from "../helper.js"
 import { createAnonymousTrace, getPointerFromTrace, comparePointer } from "../trace/trace.js"
-import { prefixValue } from "../any/any.js"
+import { prefixValue } from "../constructedBy/constructedBy.js"
 
 const getValueNameFromTrace = ({ getName, getParentTrace }) => {
 	const name = getName()
@@ -16,11 +16,11 @@ const getValueNameFromTrace = ({ getName, getParentTrace }) => {
 	return `${getValueNameFromTrace(parentTrace)} ${String(name)}`
 }
 
-const getPointerName = pointer => {
+const getPointerName = (pointer) => {
 	return pointer
 		.reverse()
 		.slice(0, -1)
-		.map(trace => String(trace.getName()))
+		.map((trace) => String(trace.getName()))
 		.join(" ")
 }
 
@@ -65,7 +65,7 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 		const expectedOwner = expectedOwnerTrace.getValue()
 		const actualOwner = actualOwnerTrace.getValue()
 
-		return sequence(getOwnPropertyNamesAndSymbols(expectedOwner), name => {
+		return sequence(getOwnPropertyNamesAndSymbols(expectedOwner), (name) => {
 			const expectedTrace = expectedOwnerTrace.discoverProperty(name)
 			const actualTrace = actualOwnerTrace.discoverProperty(name)
 
@@ -80,7 +80,7 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 			const expected = expectedTrace.getValue()
 
 			if (isAssertion(expected)) {
-				return expected(actual).then(null, message =>
+				return expected(actual).then(null, (message) =>
 					failed({
 						type: "mismatch",
 						expectedTrace,
@@ -96,7 +96,7 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 				expectedCanHaveOwnProperty !== actualCanHaveOwnProperty ||
 				expectedCanHaveOwnProperty === false
 			) {
-				return exactly(expected)(actual).then(null, message =>
+				return is(expected)(actual).then(null, (message) =>
 					failed({
 						type: "mismatch",
 						expectedTrace,
@@ -147,7 +147,7 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 				return passed()
 			}
 			const actualExtraPropertyNameOrSymbol = getOwnPropertyNamesAndSymbols(actualOwner).find(
-				name => {
+				(name) => {
 					if (hasProperty(expectedOwner, name)) {
 						return false
 					}
@@ -172,7 +172,7 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 		return createPropertiesMatcher({
 			actualTrace: createAnonymousTrace(actual),
 			expectedTrace: createAnonymousTrace(expected),
-		}).then(() => undefined, failure => failureMessageCreators[failure.type](failure))
+		}).then(() => undefined, (failure) => failureMessageCreators[failure.type](failure))
 	}
 }
 

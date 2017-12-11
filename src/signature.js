@@ -1,4 +1,4 @@
-export const createSignature = predicate => fn => {
+export const createSignature = (predicate) => (fn) => {
 	const signedFunction = (...args) => {
 		const message = predicate(...args)
 		if (message) {
@@ -18,7 +18,7 @@ export const allPredicate = (...predicates) => (...args) => {
 	}
 }
 
-export const spreadPredicate = predicate => (...args) => {
+export const spreadPredicate = (predicate) => (...args) => {
 	for (const arg of args) {
 		const returnValue = predicate(arg)
 		if (returnValue) {
@@ -27,7 +27,7 @@ export const spreadPredicate = predicate => (...args) => {
 	}
 }
 
-const createArgumentLengthPredicate = expectedLength => (...args) => {
+const createArgumentLengthPredicate = (expectedLength) => (...args) => {
 	if (args.length !== expectedLength) {
 		if (expectedLength === 0) {
 			return `must be called without argument`
@@ -44,7 +44,7 @@ export const twoArgumentPredicate = createArgumentLengthPredicate(2)
 
 export const oneOrMoreArgumentPredicate = (...args) => {
 	if (args.length === 0) {
-		return `must be called with one argument or more, got 0`
+		return `must be called with one or more argument, got 0`
 	}
 }
 
@@ -55,11 +55,3 @@ export const oneArgumentSignature = createSignature(oneArgumentPredicate)
 export const twoArgumentSignature = createSignature(twoArgumentPredicate)
 
 export const oneOrMoreArgumentSignature = createSignature(oneOrMoreArgumentPredicate)
-
-// export const firstArgumentNotNullNorUndefined = fn => (...args) => {
-// 	const [firstArg] = args
-// 	if (firstArg === null || firstArg === undefined) {
-// 		throw new TypeError(`first argument must not be ${firstArg}`)
-// 	}
-// 	return fn(firstArg)
-// }

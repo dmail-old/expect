@@ -1,68 +1,9 @@
-import { createMatcher } from "../matcher.js"
+import { createMatcherFromFunction } from "../matcher.js"
+import { withoutArgumentSignature } from "../signature.js"
 
-const getConstructorName = value => {
-	if (value === null) {
-		return "null"
-	}
-	if (value === undefined) {
-		return "undefined"
-	}
-	// handle Object.create(null)
-	if (typeof value === "object" && "constructor" in value === false) {
-		return "Object"
-	}
-	const { name } = value.constructor
-	if (name === "") {
-		if (typeof value === "object") {
-			return "Object"
-		}
-		if (typeof value === "function") {
-			return "Function"
-		}
-		return "Anonymous"
-	}
-	return name
-}
-
-export const prefix = type => {
-	if (type === "null" || type === "undefined") {
-		return type
-	}
-	const firstLetter = type[0].toLowerCase()
-	if (["a", "e", "i", "o", "u"].includes(firstLetter)) {
-		return `an ${firstLetter + type.slice(1)}`
-	}
-	return `a ${firstLetter + type.slice(1)}`
-}
-
-export const prefixValue = value => prefix(getConstructorName(value))
-
-const createFailedConstructorMessage = (expected, actual) =>
-	`expect ${prefix(expected)} but got ${prefix(actual)}`
-
-export const constructorName = createMatcher(({ expected, actual, fail, pass }) => {
-	const actualConstructorName = getConstructorName(actual)
-	if (actualConstructorName === expected) {
-		return pass()
-	}
-	return fail(createFailedConstructorMessage(expected, actualConstructorName, actual))
-})
-
-export const constructedBy = createMatcher({
-	match: ({ expected, actual }) => {
-		return constructorName(expected.name)(actual)
-	},
-})
-
-export const constructedByFromValue = expectedValue =>
-	constructedBy(getConstructorName(expectedValue))
-
-export const any = createMatcher({
-	name: "any",
-	match: ({ expected, actual, pass }) => {
-		if (expected === undefined) {
-			return pass()
-		}
-		return constructedBy(expected)(actual)
-	},
+// any must be called without argument
+// but matcher must always be called with one argument
+// so call it with null to satisfy matcher signature
+export const any = withoutArgumentSignature(() => {
+	return createMatcherFromFunction(({ pass }) => pass())(null)
 })

@@ -3,7 +3,7 @@ import { failed, passed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 
 const createNotFailureMessage = (actual, expected) =>
-	`${uneval(actual)} matching ${uneval(expected)}`
+	`unexpected ${uneval(actual)} match on ${uneval(expected)}`
 
 export const matchNot = arg => {
 	const matcher = createMatcherFrom(arg)

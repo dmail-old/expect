@@ -25,7 +25,7 @@ import {
 	isBehaviourOf,
 	oneOrMoreAllowedBehaviourSignature,
 } from "../behaviour.js"
-import { any } from "../any/any.js"
+import { constructedBy } from "../constructedBy/constructedBy.js"
 import { exactProperties } from "../properties/properties.js"
 
 export const whenCalledWith = createBehaviourFactory("whenCalledWith")
@@ -48,11 +48,11 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 		const expectedCalls = []
 		const unexpectedCalls = []
 
-		const spyMustBeCalled = spy => expectedCalls.some(expectedCall => expectedCall.spy === spy)
-		const spyMustNeverBeCalled = spy =>
-			unexpectedCalls.some(unexpectedCall => unexpectedCall.spy === spy)
+		const spyMustBeCalled = (spy) => expectedCalls.some((expectedCall) => expectedCall.spy === spy)
+		const spyMustNeverBeCalled = (spy) =>
+			unexpectedCalls.some((unexpectedCall) => unexpectedCall.spy === spy)
 
-		behaviours.forEach(behaviour => {
+		behaviours.forEach((behaviour) => {
 			if (isBehaviourOf(whenCalledWith, behaviour)) {
 				if (whenCalledWithBehaviour) {
 					throw new Error(`cannot use whenCalledWith twice`)
@@ -71,7 +71,7 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 				expectedCalls.push({
 					spy,
 					assert: createMatcherFromFunction(({ actual }) => {
-						return assertArguments(actual.createReport().argValues).then(null, message => {
+						return assertArguments(actual.createReport().argValues).then(null, (message) => {
 							return `${actual} call arguments mismatch: ${message}`
 						})
 					}),
@@ -112,8 +112,8 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 		})
 
 		const spies = expectedCalls
-			.map(expectedCall => expectedCall.spy)
-			.concat(unexpectedCalls.map(unexpectedCall => unexpectedCall.spy))
+			.map((expectedCall) => expectedCall.spy)
+			.concat(unexpectedCalls.map((unexpectedCall) => unexpectedCall.spy))
 			// ensure uniqness of spy
 			.filter((spy, index, self) => self.indexOf(spy) === index)
 
@@ -146,7 +146,7 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 					}
 				})
 				.then(() => {
-					const invalidCalls = actualCalls.filter(actualCall =>
+					const invalidCalls = actualCalls.filter((actualCall) =>
 						spyMustNeverBeCalled(actualCall.spy),
 					)
 					if (invalidCalls.length) {
@@ -171,8 +171,8 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 
 		const createActualCallsGetter = () => {
 			const actualCalls = []
-			spies.forEach(spy => {
-				spy.whenCalled(tracker => {
+			spies.forEach((spy) => {
+				spy.whenCalled((tracker) => {
 					actualCalls.push({ spy, tracker })
 				})
 			})
@@ -180,7 +180,7 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 		}
 
 		return createMatcherFromFunction(({ actual }) => {
-			return any(Function)(actual).then(() => {
+			return constructedBy(Function)(actual).then(() => {
 				let returned = false
 				let throwedValue
 				let returnedValue
