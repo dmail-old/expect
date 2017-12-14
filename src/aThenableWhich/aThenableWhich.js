@@ -1,33 +1,23 @@
 import { createMatcherFromFunction } from "../matcher.js"
-import { fromPromise, passed } from "@dmail/action"
+import { fromPromise } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 import { hasProperty } from "../helper.js"
-import { oneAllowedBehaviourSignature } from "../behaviour.js"
+import {
+	createBehaviourFactory,
+	oneAllowedBehaviourSignature,
+	isBehaviourOf,
+} from "../behaviour.js"
 import { prefixValue } from "../constructedBy/constructedBy.js"
 
-export const resolveWith = createMatcherFromFunction(({ expected, actual, fail }) => {
-	const { status, value } = actual
-	if (status === "rejected") {
-		return fail(`unexpected reject with ${uneval(value)} on thenable`)
-	}
-	return expected(value).then(null, (message) => {
-		return `resolved value mismatch: ${message}`
-	})
-})
+export const willResolveWith = createBehaviourFactory("willResolveWith")
 
-export const rejectWith = createMatcherFromFunction(({ expected, actual, fail }) => {
-	const { status, value } = actual
-	if (status === "resolved") {
-		return fail(`unexpected resolve with ${uneval(value)} on thenable`)
-	}
-	return expected(value).then(null, (message) => {
-		return `rejected value mismatch: ${message}`
-	})
-})
+export const willRejectWith = createBehaviourFactory("willRejectWith")
 
 export const aThenableWhich = oneAllowedBehaviourSignature(
-	[resolveWith, rejectWith],
+	[willResolveWith, willRejectWith],
 	(behaviour) => {
+		const expectedToResolve = isBehaviourOf(willResolveWith, behaviour)
+
 		return createMatcherFromFunction(({ expected, actual, fail }) => {
 			if (actual === null || (typeof actual !== "object" && typeof actual !== "function")) {
 				return fail(`expect a thenable but got ${prefixValue(actual)}`)
@@ -44,15 +34,22 @@ export const aThenableWhich = oneAllowedBehaviourSignature(
 
 			return fromPromise(actual)
 				.then(
-					(value) => ({
-						status: "resolved",
-						value,
-					}),
-					(reason) =>
-						passed({
-							status: "rejected",
-							value: reason,
-						}),
+					(value) => {
+						if (expectedToResolve === false) {
+							return fail(`unexpected resolve with ${uneval(value)} on thenable`)
+						}
+						return expected(value).then(null, (message) => {
+							return `resolved value mismatch: ${message}`
+						})
+					},
+					(reason) => {
+						if (expectedToResolve) {
+							return fail(`unexpected reject with ${uneval(reason)} on thenable`)
+						}
+						return expected(reason).then(null, (message) => {
+							return `rejected value mismatch: ${message}`
+						})
+					},
 				)
 				.then((meta) => expected(meta))
 		})(behaviour)
