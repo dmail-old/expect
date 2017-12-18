@@ -6,30 +6,31 @@ import {
 	oneArgumentPredicate,
 } from "./signature.js"
 
-export const createBehaviourFactory = name => {
-	const createBehaviour = (...args) => {
+export const createBehaviourFactory = (behaviour) => {
+	const factory = (...args) => {
 		return {
-			name,
-			args,
+			behaviour,
+			...behaviour.api(...args),
 		}
 	}
-	createBehaviour.name = name
-	return createBehaviour
+	factory.behaviour = behaviour
+	return factory
 }
 
-export const isBehaviour = value => typeof value === "function"
+export const isBehaviour = (value) =>
+	typeof value === "object" && typeof value.behaviour === "object"
 
-export const isBehaviourOf = (factory, value) => value && factory.name === value.name
+export const isBehaviourOf = (behaviour, value) => value && value.behaviour === behaviour
 
-const createAllowedBehaviourPredicate = allowedBehaviours => value => {
-	const allowedBehaviourNames = allowedBehaviours.map(behaviour => behaviour.name).join(",")
+const createAllowedBehaviourPredicate = (allowedBehaviours) => (value) => {
+	const allowedBehaviourTypes = allowedBehaviours.map((behaviour) => behaviour.type).join(",")
 
-	return allPredicate(allowedBehaviours, allowedBehaviour => {
+	return allPredicate(allowedBehaviours, (allowedBehaviour) => {
 		if (isBehaviour(value)) {
 			return `expect a behaviour but got ${value}`
 		}
 		if (isBehaviourOf(allowedBehaviour, value) === false) {
-			return `unexpected ${value}, must only be one of ${allowedBehaviourNames}`
+			return `unexpected ${value}, must only be one of ${allowedBehaviourTypes}`
 		}
 	})
 }
