@@ -1,23 +1,17 @@
 /*
-to be added and tested
-
 - willCallMethodWith(objectOrFunction, methodName, ...expectedArgs)
 install a spy on method during function execution
 and ensure it gets called with specified args
 can be duplicated, and in that case it means we expect method to be called
 multiple times but spy doesn't have to re reinstalled in that case
 
-// aFunctionWhich(
-// 	willMutatePropertiesOf({}, {
-// 		name: deleted(),
-// 		age: 18,
-// 		count: 5,
-// 	})
-// )
-// pour s'attendre à ce que ça mutate rien on peut écrire
-// willMutatePropertiesOf({}, {})
-// mais on fera surement un willNotMutatePropertiesOf
-
+aFunctionWhich(
+	willMutatePropertiesOf({}, {
+		name: deleted(),
+		age: 18,
+		count: 5,
+	})
+)
 */
 
 import { createMatcherFromFunction } from "../matcher.js"
@@ -25,203 +19,280 @@ import { sequence, failed, passed } from "@dmail/action"
 import { oneOrMoreAllowedBehaviourSignature } from "../behaviour.js"
 import { constructedBy } from "../constructedBy/constructedBy.js"
 import { exactProperties } from "../properties/properties.js"
-import { getOwnPropertyNamesAndSymbols, hasProperty, canHaveOwnProperty } from "../helper.js"
+import { getOwnPropertyNamesAndSymbols, canHaveOwnProperty } from "../helper.js"
+// import { watchMutation } from "./observeMutations.js"
 
-export const whenCalledWith = (...argValues) => ({
+const watchMutation = () => {}
+
+const createAPI = ({ api, type }) => (...args) => {
+	return {
+		type,
+		...api(...args),
+	}
+}
+
+const whenCalledWithBehaviour = {
 	type: "whenCalledWith",
-	argValues,
-})
+	api: (...argValues) => ({ argValues }),
+	preventDuplicate: true,
+	isDuplicate: true,
+	expect: ({ argValues }, { setArgValues }) => {
+		setArgValues(argValues)
+		return () => {}
+	},
+}
 
 const expectDeletedProperty = {}
-export const deleted = () => expectDeletedProperty
 
-export const willMutatePropertiesOf = (value, properties) => ({
+const willMutatePropertiesOfBehaviour = {
 	type: "willMutatePropertiesOf",
-	value,
-	properties,
-})
+	api: (value, properties) => ({ value, properties }),
+	preventDuplicate: true,
+	isDuplicate: (self, other) => self.value === other.value,
+	expect: ({ value, properties }, { observeMutations }) => {
+		const expectedPropertyMutations = getOwnPropertyNamesAndSymbols(properties)
+		if (expectedPropertyMutations.length === 0) {
+			throw new Error(
+				`willMutatePropertiesOf second argument is empty, use willNotMutatePropertiesOf() instead`,
+			)
+		}
 
-export const willMutateArguments = (...argValues) => ({
-	type: "willMutateArguments",
-	argValues,
-})
-
-export const willCallSpyWith = (spy, ...argValues) => ({
-	type: "willCallSpyWith",
-	spy,
-	argValues,
-})
-
-export const willNotCallSpy = (spy) => ({
-	type: "willNotCallSpy",
-	spy,
-})
-
-export const willThrowWith = (throwedValue) => ({
-	type: "willThrowWith",
-	throwedValue,
-})
-
-export const willReturnWith = (returnedValue) => ({
-	type: "willReturnWith",
-	returnedValue,
-})
-
-const observeMutations = (targets) => {
-	const observeMutation = (target) => {
-		const propertyNamesAndSymbols = getOwnPropertyNamesAndSymbols(target)
-		const propertyMutationObservers = propertyNamesAndSymbols.map((nameOrSymbol) => {
-			const get = () => target[nameOrSymbol]
-
-			const value = get()
-
-			const getMutation = () => {
-				if (hasProperty(target, nameOrSymbol) === false) {
-					return {
-						property: nameOrSymbol,
-						value,
-						type: "deleted",
-					}
-				}
-				const newValue = get()
-				if (value !== newValue) {
-					return {
-						property: nameOrSymbol,
-						value,
-						type: "updated",
-					}
-				}
-				return {
-					property: nameOrSymbol,
-					value,
-					type: "none",
-				}
+		properties = expectedPropertyMutations.map((nameOrSymbol) => {
+			return {
+				property: nameOrSymbol,
+				mutatedValue: expectedPropertyMutations[nameOrSymbol],
 			}
-
-			return getMutation
 		})
+
+		const getMutations = observeMutations(value)
 
 		return () => {
-			const nextPropertyNamesAndSymbols = getOwnPropertyNamesAndSymbols(target)
-			const propertyAndSymbolsMutations = propertyMutationObservers.map((getMutation) =>
-				getMutation(),
-			)
-			const addedPropertiesAndSymbols = nextPropertyNamesAndSymbols.filter((nameOrSymbol) => {
-				return propertyNamesAndSymbols.includes(nameOrSymbol) === false
-			})
-			const addedMutations = addedPropertiesAndSymbols.map((nameOrSymbol) => {
-				return {
-					name: nameOrSymbol,
-					value: undefined,
-					type: "added",
+			const mutations = getMutations()
+
+			return sequence(properties, ({ property, mutatedValue }) => {
+				const propertyMutation = mutations.find((mutation) => mutation.property === property)
+				if (mutatedValue === expectDeletedProperty) {
+					if (propertyMutation.type === "deleted") {
+						return passed()
+					}
+					return failed(`missing ${property} property deletion by function`)
+				}
+
+				if (propertyMutation.type === "none") {
+					return failed(`missing ${property} property mutation by function`)
+				}
+
+				if (propertyMutation.type === "deleted") {
+					return failed(`unexpected ${property} property deletion by function`)
+				}
+
+				// ici il faudrais transformer propertyValue en un matcher
+				const propertyValue = value[property]
+
+				if (propertyValue !== mutatedValue) {
+					return failed(``)
+				}
+
+				return passed()
+			}).then(() => {
+				const extraMutations = mutations.filter(({ property: actualMutatedProperty }) => {
+					return properties.some(({ property: expectedMutatedProperty }) => {
+						return actualMutatedProperty !== expectedMutatedProperty
+					})
+				})
+				if (extraMutations.length) {
+					return failed(``)
 				}
 			})
-
-			return propertyAndSymbolsMutations.concat(addedMutations)
 		}
+	},
+}
+
+const willNotMutatePropertiesOfBehaviour = {
+	type: "willNotMutatePropertiesOf",
+	api: (value) => ({ value }),
+	preventDuplicate: true,
+	isDuplicate: (self, other) => self.value === other.value,
+	expect: ({ value }, { observeMutations }) => {
+		const getMutations = observeMutations(value)
+
+		return () => {
+			const mutations = getMutations()
+			if (mutations.length) {
+				// const mutations = valueMutations.mutations
+				// 4 unexpected mutations :
+				// bar property updated from ${uneval()} to ${uneval()}
+				// stuff property updated from to...
+				// foo property added with ${uneval()}
+				// name property deleted
+				return failed(``)
+			}
+			return passed()
+		}
+	},
+}
+
+const willMutateArgumentsBehaviour = {
+	type: "willMutateArguments",
+	api: (...argValues) => ({ argValues }),
+	expect: ({ argValues }, { getArgValue }) => {
+		argValues.forEach((value, index) => {
+			const arg = getArgValue(index)
+			if (canHaveOwnProperty(arg)) {
+				// comment gérer ce cas?
+				// je dirais qu'il faut éxécuter willMutatePropertiesOfBehaviour
+				// puis retourner ce qui en résulte, bref
+				behaviourHandlers.willMutateProperties({
+					value: arg,
+					properties: value,
+				})
+			}
+		})
+	},
+}
+
+const willCallSpyWithBehaviour = {
+	type: "willCallSpyWith",
+	api: (spy, ...argValues) => ({ spy, argValues }),
+	preventDuplicate: false,
+	expect: ({ spy, argValues }, { observeCallAtIndex }) => {
+		const expectedSpy = spy
+		// voir comment on va gérer ça, parce que si on s'en tient au naming
+		// observeCall n'indique pas que l'index est important
+		// hors c'est le cas ici
+		const expectedIndex = finalBehaviours.filter(({ type }) => {
+			return type === "willCallSpyWith"
+		}).length
+
+		const getActualCall = observeCallAtIndex(expectedIndex)
+
+		return () => {
+			const actualCall = getActualCall()
+
+			if (!actualCall) {
+				return failed(`missing call to ${expectedSpy}`)
+			}
+
+			const actualSpy = actualCall.spy
+			const actualTracker = actualCall.tracker
+
+			if (actualSpy !== expectedSpy) {
+				return failed(`unexpected call to ${actualSpy}, expecting a call to ${expectedSpy}`)
+			}
+
+			const assertArguments = exactProperties(argValues)
+			return assertArguments(actualTracker.createReport().argValues).then(null, (message) => {
+				return `${actualTracker} call arguments mismatch: ${message}`
+			})
+		}
+	},
+}
+
+const willNotCallSpyBehaviour = {
+	type: "willNotCallSpy",
+	api: (spy) => ({ spy }),
+	preventDuplicate: true,
+	expect: ({ spy }, { observeSpyCalls }) => {
+		const getActualCalls = observeSpyCalls(spy)
+		return () => {
+			const unexpectedCalls = getActualCalls()
+			if (unexpectedCalls.length) {
+				// we should add one line per unexpected call to detail each call arguments
+				return failed(`${unexpectedCalls.length} unexpected call to ${spy}`)
+			}
+			return passed()
+		}
+	},
+}
+
+const willThrowWithBehaviour = {
+	type: "willThrowWith",
+	api: (throwedValue) => ({ throwedValue }),
+	preventDuplicate: true,
+	expect: ({ throwedValue }, { observeResultState, observeResultValue }) => {
+		const getResultState = observeResultState()
+		const getResultValue = observeResultValue()
+
+		return () => {
+			const state = getResultState()
+			if (state === "returned") {
+				return failed(`missing throw`)
+			}
+			return throwedValue(getResultValue())
+		}
+	},
+}
+
+const willReturnWithBehaviour = {
+	type: "willReturnWith",
+	preventDuplicate: true,
+	api: (returnedValue) => ({ returnedValue }),
+	expect: ({ returnedValue }, { observeResultValue }) => {
+		const getResultValue = observeResultValue()
+
+		return () => {
+			return returnedValue(getResultValue())
+		}
+	},
+}
+
+const preventOpposite = (positiveBehaviour, negativeBehaviour, compare) => {
+	positiveBehaviour.opposite = negativeBehaviour
+	negativeBehaviour.opposite = positiveBehaviour
+
+	positiveBehaviour.preventOpposite = true
+	negativeBehaviour.preventOpposite = true
+
+	positiveBehaviour.compareOpposite = compare
+	negativeBehaviour.compareOpposite = compare
+}
+
+preventOpposite(
+	willMutatePropertiesOfBehaviour,
+	willNotMutatePropertiesOfBehaviour,
+	(a, b) => a.value === b.value,
+)
+
+preventOpposite(willCallSpyWithBehaviour, willNotCallSpyBehaviour, (a, b) => a.spy === b.spy)
+
+preventOpposite(willThrowWithBehaviour, willReturnWithBehaviour, () => true)
+
+export const whenCalledWith = createAPI(whenCalledWithBehaviour)
+
+export const deleted = () => expectDeletedProperty
+
+export const willMutatePropertiesOf = createAPI(willMutatePropertiesOfBehaviour)
+
+export const willNotMutatePropertiesOf = createAPI(willNotMutatePropertiesOfBehaviour)
+
+export const willMutateArguments = createAPI(willMutateArgumentsBehaviour)
+
+export const willCallSpyWith = createAPI(willCallSpyWithBehaviour)
+
+export const willNotCallSpy = createAPI(willNotCallSpyBehaviour)
+
+export const willThrowWith = createAPI(willThrowWithBehaviour)
+
+export const willReturnWith = createAPI(willReturnWithBehaviour)
+
+const createLazyGetter = (getter) => {
+	const get = () => getter()
+
+	const set = (fn) => {
+		getter = fn
 	}
 
-	const getters = targets.map((target) => observeMutation(target))
-
-	return () =>
-		getters.map((getter, index) => {
-			return {
-				value: targets[index],
-				mutations: getter(),
-			}
-		})
-}
-
-const observeCalls = (spies) => {
-	const actualCalls = []
-
-	spies.forEach((spy) => {
-		spy.whenCalled((tracker) => {
-			actualCalls.push({ spy, tracker })
-		})
-	})
-
-	return () => actualCalls
-}
-
-const behaviourAssertions = {
-	willMutateProperty: (behaviour, index, behaviours, { mutations }) => {
-		const { value, property, expected } = behaviour
-		const valueMutations = mutations.find((mutation) => mutation.value === value).mutations
-		const propertyMutation = valueMutations.find((mutation) => mutation.property === property)
-
-		if (expected === expectDeletedProperty) {
-			if (propertyMutation.type === "deleted") {
-				return passed()
-			}
-			return failed(`missing ${property} property deletion by function`)
-		}
-
-		if (propertyMutation.type === "none") {
-			return failed(`missing ${property} property mutation by function`)
-		}
-
-		if (propertyMutation.type === "deleted") {
-			return failed(`unexpected ${property} property deletion by function`)
-		}
-
-		return expected(value[property])
-	},
-
-	willCallSpyWith: (behaviour, index, behaviours, { calls }) => {
-		const [spy, ...args] = behaviour.args
-		const expectedCallIndex = 0 // à calculer en fonction du nombre de behaviour
-		// précédent celui ci qui sont du même type
-		const expectedSpy = spy
-		const actualCall = calls[expectedCallIndex]
-
-		if (!actualCall) {
-			return failed(`missing call to ${expectedSpy}`)
-		}
-
-		const actualSpy = actualCall.spy
-		const actualTracker = actualCall.tracker
-
-		if (actualSpy !== expectedSpy) {
-			return failed(`unexpected call to ${actualSpy}, expecting a call to ${expectedSpy}`)
-		}
-
-		const assertArguments = exactProperties(args)
-		return assertArguments(actualTracker.createReport().argValues).then(null, (message) => {
-			return `${actualTracker} call arguments mismatch: ${message}`
-		})
-	},
-
-	willNotCallSpy: (behaviour, index, behaviours, { calls }) => {
-		const expectedSpy = behaviour.args[0]
-		const unexpectedCalls = calls.filter((call) => {
-			return call.spy === expectedSpy
-		})
-		if (unexpectedCalls.length) {
-			const firstInvalidCall = unexpectedCalls[0]
-			return failed(`unexpected call to ${firstInvalidCall.spy}`)
-		}
-		return passed()
-	},
-
-	willThrowWith: (behaviour, index, behaviours, { result }) => {
-		const { state, value } = result
-		if (state === "returned") {
-			return failed(`missing throw`)
-		}
-		return behaviour.args[0](value)
-	},
-
-	willReturnWith: (behaviour, index, behaviours, { result }) => {
-		const { value } = result
-		return behaviour.args[0](value)
-	},
+	return {
+		get,
+		set,
+	}
 }
 
 export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 	[
 		whenCalledWith,
 		willMutatePropertiesOf,
+		willNotMutatePropertiesOf,
 		willMutateArguments,
 		willCallSpyWith,
 		willNotCallSpy,
@@ -230,207 +301,114 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 	],
 	(...behaviours) => {
 		let args = []
-		let whenCalledWithBehaviour
-		let mutateArgumentsBehaviour
-
-		const finalBehaviours = []
-
-		const hasBehaviourOfType = (someType) => finalBehaviours.some(({ type }) => type === someType)
-
-		const spyMustBeCalled = (someSpy) => {
-			return finalBehaviours.some(({ type, spy }) => type === "willCallSpyWith" && spy === someSpy)
+		const setArgValues = (values) => {
+			args = values
 		}
 
-		const spyMustNotBeCalled = (someSpy) => {
-			return finalBehaviours.some(({ type, spy }) => type === "willNotCallSpy" && spy === someSpy)
+		const mutationObservers = []
+		const observeMutations = (value) => {
+			const { get, set } = createLazyGetter()
+
+			mutationObservers.push({
+				value,
+				set,
+			})
+
+			return get
 		}
 
-		const behaviourHandlers = {
-			whenCalledWith: (behaviour) => {
-				if (whenCalledWithBehaviour) {
-					throw new Error(`cannot use whenCalledWith twice`)
-				}
-				whenCalledWithBehaviour = behaviour
+		const callObservers = []
+		const observeSpyCalls = (spy) => {
+			const { get, set } = createLazyGetter()
 
-				args = behaviour.args
-			},
+			callObservers.push({
+				map: (calls) => calls.filter((call) => call.spy === spy),
+				spy,
+				set,
+			})
 
-			willMutatePropertyOf: ({ value, property, expected }) => {
-				const existing = finalBehaviours.find(
-					(behaviour) =>
-						behaviour.type === "willMutatePropertyOf" &&
-						behaviour.value === value &&
-						behaviour.property === property,
-				)
-				if (existing) {
-					if (existing.expected === expectDeletedProperty && expected === expectDeletedProperty) {
-						throw new Error(`cannot override existing ${property} property expected deletion`)
-					}
-					throw new Error(`cannot override existing ${property} property expected mutation`)
-				}
-				finalBehaviours.push({
-					type: "willMutatePropertyOf",
-					value,
-					property,
-					expected,
-				})
-			},
+			return get
+		}
+		const observeSpyCallAtIndex = (index, spy) => {
+			const { get, set } = createLazyGetter()
 
-			willMutatePropertiesOf: ({ value, properties }) => {
-				if (
-					behaviours.some(
-						({ type, value: behaviourValue }) =>
-							type === "willMutatePropertiesOf" && behaviourValue === value,
-					)
-				) {
-					throw new Error(`cannot use willMutatePropertiesOf twice on same value`)
-				}
-				const expectedPropertyMutations = getOwnPropertyNamesAndSymbols(properties)
-				expectedPropertyMutations.forEach((nameOrSymbol) => {
-					behaviourHandlers.willMutatePropertyOf({
-						value,
-						property: nameOrSymbol,
-						expected: expectedPropertyMutations[nameOrSymbol],
-					})
-				})
-			},
+			callObservers.push({
+				map: (calls) => calls[index],
+				spy,
+				set,
+			})
 
-			willMutateArguments: ({ values }) => {
-				if (mutateArgumentsBehaviour) {
-					throw new Error(`cannot use willMutateArguments twice`)
-				}
-				mutateArgumentsBehaviour = true
-
-				values.forEach((value, index) => {
-					const arg = args[index]
-					if (canHaveOwnProperty(arg)) {
-						behaviourHandlers.willMutateProperties({
-							value: arg,
-							properties: value,
-						})
-					}
-				})
-			},
-
-			willCallSpyWith: ({ spy, argValues }) => {
-				if (spyMustNotBeCalled(spy)) {
-					throw new Error(`cannot use callSpyWith on a spy which was used by neverCallSpy`)
-				}
-				finalBehaviours.push({
-					type: "willCallSpyWith",
-					spy,
-					argValues,
-				})
-			},
-
-			willNotCallSpy: ({ spy }) => {
-				if (spyMustBeCalled(spy)) {
-					throw new Error(`cannot use callSpyWith on a spy which was used by neverCallSpy`)
-				}
-				finalBehaviours.push({
-					type: "willNotCallSpy",
-					spy,
-				})
-			},
-
-			willThrowWith: ({ throwedValue }) => {
-				if (hasBehaviourOfType("willReturnWith")) {
-					throw new Error(`cannot use throwWith once you have used returnWith`)
-				}
-				if (hasBehaviourOfType("willThrowWith")) {
-					throw new Error(`cannot use throwWith twice`)
-				}
-				finalBehaviours.push({
-					type: "willThrowWith",
-					throwedValue,
-				})
-			},
-
-			willReturnWith: ({ returnedValue }) => {
-				if (hasBehaviourOfType("willThrowWith")) {
-					throw new Error(`cannot use returnWith once you have used throwWith`)
-				}
-				if (hasBehaviourOfType("willReturnWith")) {
-					throw new Error(`cannot use returnWith twice`)
-				}
-				finalBehaviours.push({
-					type: "willReturnWith",
-					returnedValue,
-				})
-			},
+			return get
 		}
 
-		const handleExpectedBehaviour = (behaviour) => {
-			const { type } = behaviour
-			behaviourHandlers[type](behaviour)
+		const { set: setResultStateGetter, get: getResultState } = createLazyGetter()
+		let stateObserved = false
+		const observeResultState = () => {
+			stateObserved = true
+			return getResultState
 		}
 
-		behaviours.forEach((behaviour) => handleExpectedBehaviour(behaviour))
+		const { set: setResultValueGetter, get: getResultValue } = createLazyGetter()
+		const observeResultValue = () => {
+			return getResultValue
+		}
 
-		const targets = finalBehaviours
-			.filter(({ type }) => type === "willMutatePropertyOf")
-			.map(({ value }) => value)
-			.filter((value, index, self) => self.indexOf(value) === index)
-
-		const spies = finalBehaviours
-			.filter(({ type }) => type === "willCallSpyWith" || type === "willNotCallSpy")
-			.map(({ spy }) => spy)
-			.filter((spy, index, self) => self.indexOf(spy) === index)
+		const assertions = behaviours.map((behaviour) => {
+			return behaviour.expect(behaviour, {
+				setArgValues,
+				observeMutations,
+				observeSpyCalls,
+				observeSpyCallAtIndex,
+				observeResultState,
+				observeResultValue,
+			})
+		})
 
 		return createMatcherFromFunction(({ actual }) => {
 			return constructedBy(Function)(actual).then(() => {
-				let returned = false
-				let throwedValue
-				let returnedValue
+				mutationObservers.forEach(({ value, set }) => {
+					set(watchMutation(value))
+				})
 
-				const getCalls = observeCalls(spies)
-				const getMutations = observeMutations(targets)
+				const calls = []
+				callObservers.forEach(({ spy, map, set }) => {
+					spy.whenCalled((tracker) => {
+						calls.push(tracker)
+					})
+					set(() => map(calls))
+				})
 
-				if (hasBehaviourOfType("willThrowWith")) {
+				let resultState = "unknown"
+				setResultStateGetter(() => resultState)
+
+				let resultValue
+				setResultValueGetter(() => resultValue)
+
+				if (stateObserved) {
 					try {
-						returnedValue = actual(...args)
+						resultValue = actual(...args)
+						resultState = "returned"
 					} catch (e) {
-						returned = false
-						throwedValue = e
+						resultState = "throwed"
+						resultValue = e
 					}
 				} else {
-					returnedValue = actual(...args)
-					returned = true
+					resultValue = actual(...args)
+					resultState = "returned"
 				}
 
-				const mutations = getMutations()
-				const calls = getCalls()
-				const result = {
-					state: returned ? "returned" : "throwed",
-					value: returned ? returnedValue : throwedValue,
-				}
-
-				return sequence(finalBehaviours, (behaviour, index) => {
-					return behaviourAssertions[behaviour.type](behaviour, index, { mutations, calls, result })
+				return sequence(assertions, (assertion) => assertion()).then(() => {
+					// ici faut s'assurer que y'a pas d'extra calls
+					// const extraCalls = calls.slice(expectedCalls.length)
+					// if (extraCalls.length) {
+					// 	const firstExtraCall = extraCalls[0]
+					// 	let message = `unexpected call to ${firstExtraCall.spy}`
+					// 	if (extraCalls.length > 1) {
+					// 		message += ` and ${extraCalls.length - 1} more`
+					// 	}
+					// 	return failed(message)
+					// }
 				})
-					.then(() => {
-						// we must ensure there is no extra mutations
-						mutations.forEach((mutation) => {
-							const valueMutations = mutation.mutations
-							const expectedValueMutations = []
-							if (valueMutations.length > expectedValueMutations.length) {
-								// les extra mutation sont celles qui portent sur des propriété
-								// non traquées
-							}
-						})
-					})
-					.then(() => {
-						// ici faut s'assurer que y'a pas d'extra calls
-						// const extraCalls = calls.slice(expectedCalls.length)
-						// if (extraCalls.length) {
-						// 	const firstExtraCall = extraCalls[0]
-						// 	let message = `unexpected call to ${firstExtraCall.spy}`
-						// 	if (extraCalls.length > 1) {
-						// 		message += ` and ${extraCalls.length - 1} more`
-						// 	}
-						// 	return failed(message)
-						// }
-					})
 			})
 		})
 	},
