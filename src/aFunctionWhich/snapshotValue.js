@@ -41,7 +41,11 @@ export const getMutationsFromSnapshot = ({ getValue, getPropertiesSnapshots }, v
 		if (propertyValue !== propertySnapshotValue) {
 			return { ...common, type: "updated" }
 		}
-		return { ...common, type: "none" }
+		const propertiesMutations = getMutationsFromSnapshot(propertySnapshot, propertyValue)
+		if (propertiesMutations.length === 0) {
+			return { ...common, type: "none" }
+		}
+		return { ...common, type: "mutated", mutations: propertiesMutations }
 	})
 
 	const propertyNamesAndSymbols = getOwnPropertyNamesAndSymbols(value)

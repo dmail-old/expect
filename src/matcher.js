@@ -8,7 +8,7 @@ const assertSymbol = Symbol()
 export const isMatcher = (value) => hasProperty(value, matchSymbol)
 export const isAssertion = (value) => hasProperty(value, assertSymbol)
 
-export const createMatcher = ({ match, name }) => {
+export const createMatcher = ({ match }) => {
 	const matcher = oneArgumentSignature((expected) => {
 		const assert = oneArgumentSignature((actual) => {
 			const action = createAction()
@@ -30,12 +30,12 @@ export const createMatcher = ({ match, name }) => {
 		})
 		assert[assertSymbol] = true
 		assert.matcher = matcher
-		assert.name = name
+		// assert.name = name
 
 		return assert
 	})
 	matcher[matchSymbol] = true
-	matcher.name = name
+	// matcher.name = name
 	return matcher
 }
 

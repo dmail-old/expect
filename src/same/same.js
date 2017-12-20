@@ -3,6 +3,7 @@ import { sameConstructor } from "../constructedBy/constructedBy.js"
 import { exactProperties } from "../properties/properties.js"
 import { uneval } from "@dmail/uneval"
 import { canHaveProperty } from "../helper.js"
+import { is } from "../is/is.js"
 
 export const same = createMatcherFromFunction(({ expected, actual, fail, pass }) => {
 	if (expected === actual) {
@@ -20,10 +21,8 @@ export const same = createMatcherFromFunction(({ expected, actual, fail, pass })
 		}
 		return fail(`expect undefined but got ${uneval(actual)}`)
 	}
-	return sameConstructor(expected)(actual).then(() => {
-		if (canHaveProperty(expected)) {
-			return exactProperties(expected)(actual)
-		}
-		return pass()
-	})
+	if (canHaveProperty(expected)) {
+		return sameConstructor(expected)(actual).then(() => exactProperties(expected)(actual))
+	}
+	return is(expected)(actual)
 })

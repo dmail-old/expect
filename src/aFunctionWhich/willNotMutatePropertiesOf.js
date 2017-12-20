@@ -1,6 +1,38 @@
 import { createBehaviourFactory } from "../behaviour.js"
 import { failed, passed } from "@dmail/action"
 
+const createUnexpectedMutationsMessage = ({ mutations, value }) => {
+	const createMutationsMessages = (mutations, value) => {
+		return mutations.reduce((accumulator, mutation) => {
+			if (mutation.type === "deleted") {
+				return accumulator.concat(`${String(mutation.property)} deleted`)
+			}
+			if (mutation.type === "updated") {
+				return accumulator.concat(
+					`${String(mutation.property)} updated from ${String(mutation.value)} to ${String(
+						value[mutation.property],
+					)}`,
+				)
+			}
+			if (mutation.type === "added") {
+				return accumulator.concat(
+					`${String(mutation.property)} added with ${String(value[mutation.property])}`,
+				)
+			}
+			if (mutation.type === "mutated") {
+				// faudrais filter mutation.mutations qui sont none
+				return accumulator.concat(
+					createMutationsMessages(mutation.mutations, value[mutation.property]),
+				)
+			}
+			return accumulator
+		}, [])
+	}
+	const messages = createMutationsMessages(mutations, value)
+	return `${messages.length} unexpected mutations:
+	${messages.join("\n")}`
+}
+
 const willNotMutatePropertiesOfBehaviour = {
 	type: "willNotMutatePropertiesOf",
 	api: (value) => ({ value }),
@@ -10,15 +42,9 @@ const willNotMutatePropertiesOfBehaviour = {
 		const getMutations = observeMutations(value)
 
 		return () => {
-			const mutations = getMutations()
+			const mutations = getMutations().filter(({ type }) => type !== "none")
 			if (mutations.length) {
-				// const mutations = valueMutations.mutations
-				// 4 unexpected mutations :
-				// bar property updated from ${uneval()} to ${uneval()}
-				// stuff property updated from to...
-				// foo property added with ${uneval()}
-				// name property deleted
-				return failed(``)
+				return failed(createUnexpectedMutationsMessage({ mutations, value }))
 			}
 			return passed()
 		}
