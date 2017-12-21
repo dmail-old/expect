@@ -8,31 +8,33 @@ const assertSymbol = Symbol()
 export const isMatcher = (value) => hasProperty(value, matchSymbol)
 export const isAssertion = (value) => hasProperty(value, assertSymbol)
 
+export const createAssertionFromFunction = (fn) => {
+	const assert = oneArgumentSignature((actual) => {
+		const action = createAction()
+		const pass = (data) => action.pass(data)
+		const fail = (data) => action.fail(data)
+
+		const returnValue = fn({
+			actual,
+			fail,
+			pass,
+		})
+
+		if (isAction(returnValue)) {
+			returnValue.then(pass, fail)
+		}
+
+		return action
+	})
+	assert[assertSymbol] = true
+	return assert
+}
+
 export const createMatcher = ({ match }) => {
 	const matcher = oneArgumentSignature((expected) => {
-		const assert = oneArgumentSignature((actual) => {
-			const action = createAction()
-			const pass = (data) => action.pass(data)
-			const fail = (data) => action.fail(data)
-
-			const returnValue = match({
-				actual,
-				expected,
-				fail,
-				pass,
-			})
-
-			if (isAction(returnValue)) {
-				returnValue.then(pass, fail)
-			}
-
-			return action
+		return createAssertionFromFunction(({ actual, fail, pass }) => {
+			return match({ actual, fail, pass, expected })
 		})
-		assert[assertSymbol] = true
-		assert.matcher = matcher
-		// assert.name = name
-
-		return assert
 	})
 	matcher[matchSymbol] = true
 	// matcher.name = name

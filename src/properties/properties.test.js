@@ -27,22 +27,22 @@ export const test = createTest({
 	"called without argument": ({ pass }) => {
 		assert.throws(
 			() => exactProperties(),
-			e => e.message === `must be called with one argument, got 0`,
+			(e) => e.message === `must be called with 1 argument, got 0`,
 		)
 		assert.throws(
 			() => theseProperties(),
-			e => e.message === `must be called with one argument, got 0`,
+			(e) => e.message === `must be called with 1 argument, got 0`,
 		)
 		pass()
 	},
 	"called with 2 argument": ({ pass }) => {
 		assert.throws(
 			() => exactProperties(true, true),
-			e => e.message === `must be called with one argument, got 2`,
+			(e) => e.message === `must be called with 1 argument, got 2`,
 		)
 		assert.throws(
 			() => theseProperties(true, true),
-			e => e.message === `must be called with one argument, got 2`,
+			(e) => e.message === `must be called with 1 argument, got 2`,
 		)
 		pass()
 	},

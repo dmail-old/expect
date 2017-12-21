@@ -40,7 +40,7 @@ export const prefixValue = (value) => prefix(getConstructorName(value))
 const createFailedConstructorMessage = (expected, actual) =>
 	`expect ${prefix(expected)} but got ${prefix(actual)}`
 
-export const constructorName = createMatcherFromFunction(({ expected, actual, fail, pass }) => {
+export const constructedBy = createMatcherFromFunction(({ expected, actual, fail, pass }) => {
 	const actualConstructorName = getConstructorName(actual)
 	if (actualConstructorName === expected) {
 		return pass()
@@ -48,13 +48,6 @@ export const constructorName = createMatcherFromFunction(({ expected, actual, fa
 	return fail(createFailedConstructorMessage(expected, actualConstructorName, actual))
 })
 
-export const constructedBy = createMatcherFromFunction(({ expected, actual, pass }) => {
-	if (expected === undefined) {
-		return pass()
-	}
-	return constructedBy(expected)(actual)
+export const sameConstructor = createMatcherFromFunction(({ actual, expected }) => {
+	return constructedBy(getConstructorName(expected))(actual)
 })
-
-export const sameConstructor = createMatcherFromFunction(({ actual, expected }) =>
-	constructedBy(getConstructorName(expected))(actual),
-)

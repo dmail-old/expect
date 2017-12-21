@@ -1,4 +1,10 @@
 /*
+it would be way easier, when asserting we don't mutate an object
+to just do Object.freeze on it and let throw but
+- without use strict is silently fails
+- it makes the object non extensible so test code cannot reuse it later
+- error message will be less sexy
+
 - willCallMethodWith(objectOrFunction, methodName, ...expectedArgs)
 install a spy on method during function execution
 and ensure it gets called with specified args
@@ -94,19 +100,18 @@ const checkOpposite = (previousBehaviours, behaviour) => {
 	}
 }
 
-const parseBehaviours = (behaviours, accumulator = []) => {
-	behaviours.forEach((accumulator, current) => {
+const parseBehaviours = (behaviours) => {
+	return behaviours.reduce((accumulator, current) => {
 		const behaviour = current.behaviour
 		checkDuplicate(accumulator, behaviour)
 		checkOpposite(accumulator, behaviour)
+		debugger
 
 		if (behaviour.split) {
-			parseBehaviours(behaviour.split(), accumulator)
-		} else {
-			accumulator.push(behaviour)
+			return accumulator.concat(parseBehaviours(behaviour.split()))
 		}
-	})
-	return accumulator
+		return accumulator.concat(behaviour)
+	}, [])
 }
 
 export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(

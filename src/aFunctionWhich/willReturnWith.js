@@ -1,4 +1,5 @@
 import { createBehaviourFactory } from "../behaviour.js"
+import { createAssertionFrom } from "../createAssertionFrom/createAssertionFrom.js"
 
 const willReturnWithBehaviour = {
 	type: "willReturnWith",
@@ -6,9 +7,11 @@ const willReturnWithBehaviour = {
 	api: (returnedValue) => ({ returnedValue }),
 	expect: ({ returnedValue }, { observeResultValue }) => {
 		const getResultValue = observeResultValue()
+		const assertReturnValue = createAssertionFrom(returnedValue)
+		debugger
 
 		return () => {
-			return returnedValue(getResultValue())
+			return assertReturnValue(getResultValue())
 		}
 	},
 }

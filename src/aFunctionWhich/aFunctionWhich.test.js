@@ -13,8 +13,8 @@ const assertFailedWith = (action, value) => {
 	assert.equal(action.getState(), "failed")
 }
 
-export default createTest({
-	"throw the expected exception": ({ pass }) => {
+export const test = createTest({
+	"aFunctionWhich returnWith null": ({ pass }) => {
 		assertPassedWith(aFunctionWhich(willReturnWith(null))(() => null))
 		pass()
 	},

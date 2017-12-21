@@ -32,7 +32,7 @@ const createArgumentLengthPredicate = (expectedLength) => (...args) => {
 		if (expectedLength === 0) {
 			return `must be called without argument`
 		}
-		return `must be called with ${expectedLength} argument, (got ${args.length})`
+		return `must be called with ${expectedLength} argument, got ${args.length}`
 	}
 }
 

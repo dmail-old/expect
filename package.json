@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"@dmail/action": "1.7.0",
-		"@dmail/mixin": "2.0.0",
+		"@dmail/mixin": "3.0.0",
 		"@dmail/spy": "0.0.2",
 		"@dmail/uneval": "1.0.0"
 	},
@@ -28,7 +28,7 @@
 		"@dmail/ensure": "0.0.2",
 		"@dmail/prettiest": "1.0.0",
 		"@dmail/shared-config": "3.1.0",
-		"@dmail/test": "2.2.1",
+		"@dmail/test": "3.0.0",
 		"babel-cli": "7.0.0-beta.0",
 		"babel-core": "7.0.0-beta.0",
 		"babel-eslint": "8.0.0",

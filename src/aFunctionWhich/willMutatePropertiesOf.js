@@ -1,6 +1,9 @@
 import { createBehaviourFactory } from "../behaviour.js"
 import { getOwnPropertyNamesAndSymbols } from "../helper.js"
-import { sequence, failed, passed } from "@dmail/action"
+import { sequence, failed } from "@dmail/action"
+import { createAssertionFromFunction } from "../matcher.js"
+import { exactProperties } from "../properties/properties"
+import { createMutationsMessages } from "./snapshotValue.js"
 
 const expectDeletedProperty = {}
 
@@ -19,10 +22,31 @@ const willMutatePropertiesOfBehaviour = {
 			)
 		}
 
-		properties = expectedPropertyMutations.map((nameOrSymbol) => {
+		const propertyAssertions = expectedPropertyMutations.map((nameOrSymbol) => {
+			const descriptor = Object.getOwnPropertyDescriptor(expectedPropertyMutations, nameOrSymbol)
+
 			return {
 				property: nameOrSymbol,
-				mutatedValue: expectedPropertyMutations[nameOrSymbol],
+				assertion: createAssertionFromFunction(({ actual: mutation, fail, pass }) => {
+					if ("value" in descriptor && descriptor.value === expectDeletedProperty) {
+						if (mutation.type === "deleted") {
+							return pass()
+						}
+						return fail(`missing ${nameOrSymbol} property deletion by function`)
+					}
+
+					if (mutation.type === "deleted") {
+						return failed(`unexpected ${nameOrSymbol} property deletion by function`)
+					}
+
+					if (mutation.type === "none") {
+						return fail(`missing ${nameOrSymbol} property mutation by function`)
+					}
+
+					return exactProperties(descriptor, mutation.nextDescriptor).then((message) => {
+						return `mutation mismatch: ${message}`
+					})
+				}),
 			}
 		})
 
@@ -31,39 +55,19 @@ const willMutatePropertiesOfBehaviour = {
 		return () => {
 			const mutations = getMutations()
 
-			return sequence(properties, ({ property, mutatedValue }) => {
+			return sequence(propertyAssertions, ({ property, assertion }) => {
 				const propertyMutation = mutations.find((mutation) => mutation.property === property)
-				if (mutatedValue === expectDeletedProperty) {
-					if (propertyMutation.type === "deleted") {
-						return passed()
-					}
-					return failed(`missing ${property} property deletion by function`)
-				}
-
-				if (propertyMutation.type === "none") {
-					return failed(`missing ${property} property mutation by function`)
-				}
-
-				if (propertyMutation.type === "deleted") {
-					return failed(`unexpected ${property} property deletion by function`)
-				}
-
-				// ici il faudrais transformer propertyValue en un matcher
-				const propertyValue = value[property]
-
-				if (propertyValue !== mutatedValue) {
-					return failed(``)
-				}
-
-				return passed()
+				return assertion(propertyMutation)
 			}).then(() => {
-				const extraMutations = mutations.filter(({ property: actualMutatedProperty }) => {
-					return properties.some(({ property: expectedMutatedProperty }) => {
-						return actualMutatedProperty !== expectedMutatedProperty
+				const extraMutations = mutations.filter((mutation) => {
+					return propertyAssertions.some((propertyAssertion) => {
+						return mutation.property !== propertyAssertion.property
 					})
 				})
 				if (extraMutations.length) {
-					return failed(``)
+					const messages = createMutationsMessages(extraMutations)
+					return failed(`${messages.length} extra mutations:
+					${messages.join("\n")}`)
 				}
 			})
 		}
