@@ -1,7 +1,7 @@
 import { sequence, passed, failed } from "@dmail/action"
 import { isAssertion, createMatcherFromFunction } from "../matcher.js"
 import { is } from "../is/is.js"
-import { canHaveOwnProperty, getOwnPropertyNamesAndSymbols, hasProperty } from "../helper.js"
+import { getOwnPropertyNamesAndSymbols, hasProperty, canHaveProperty } from "../helper.js"
 import { createAnonymousTrace, getPointerFromTrace, comparePointer } from "../trace/trace.js"
 import { prefixValue } from "../constructedBy/constructedBy.js"
 
@@ -89,13 +89,10 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 				)
 			}
 
-			const expectedCanHaveOwnProperty = canHaveOwnProperty(expected)
-			const actualCanHaveOwnProperty = canHaveOwnProperty(actual)
+			const expectedCanHaveProperty = canHaveProperty(expected)
+			const actualCanHaveProperty = canHaveProperty(actual)
 
-			if (
-				expectedCanHaveOwnProperty !== actualCanHaveOwnProperty ||
-				expectedCanHaveOwnProperty === false
-			) {
+			if (expectedCanHaveProperty !== actualCanHaveProperty || expectedCanHaveProperty === false) {
 				return is(expected)(actual).then(null, (message) =>
 					failed({
 						type: "mismatch",

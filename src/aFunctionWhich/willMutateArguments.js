@@ -1,5 +1,5 @@
 import { createBehaviourFactory } from "../behaviour.js"
-import { canHaveOwnProperty } from "../helper.js"
+import { canSetOwnProperty } from "../helper.js"
 import { willMutatePropertiesOf } from "./willMutatePropertiesOf.js"
 
 const willMutateArgumentsBehaviour = {
@@ -18,7 +18,7 @@ const willMutateArgumentsBehaviour = {
 		return argMutations
 			.filter((argMutation, index) => {
 				const arg = args[index]
-				return canHaveOwnProperty(arg)
+				return canSetOwnProperty(arg)
 			})
 			.map((argMutation, index) => {
 				const arg = args[index]

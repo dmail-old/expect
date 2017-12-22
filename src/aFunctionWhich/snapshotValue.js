@@ -1,22 +1,17 @@
-import { getOwnPropertyNamesAndSymbols, canHaveOwnProperty } from "../helper.js"
+import { getOwnPropertyNamesAndSymbols } from "../helper.js"
 import { uneval } from "@dmail/uneval"
 
 export const createValueSnapshot = (value) => {
-	let propertiesSnapshots
-	if (canHaveOwnProperty(value)) {
-		propertiesSnapshots = getOwnPropertyNamesAndSymbols(value).map((nameOrSymbol) => {
-			const descriptor = Object.getOwnPropertyDescriptor(value, nameOrSymbol)
-			const valueSnapshot = "value" in descriptor ? createValueSnapshot(descriptor.value) : null
+	const propertiesSnapshots = getOwnPropertyNamesAndSymbols(value).map((nameOrSymbol) => {
+		const descriptor = Object.getOwnPropertyDescriptor(value, nameOrSymbol)
+		const valueSnapshot = "value" in descriptor ? createValueSnapshot(descriptor.value) : null
 
-			return {
-				getProperty: () => nameOrSymbol,
-				getDescriptor: () => descriptor,
-				getValueSnapshot: () => valueSnapshot,
-			}
-		})
-	} else {
-		propertiesSnapshots = []
-	}
+		return {
+			getProperty: () => nameOrSymbol,
+			getDescriptor: () => descriptor,
+			getValueSnapshot: () => valueSnapshot,
+		}
+	})
 
 	return {
 		getValue: () => value,

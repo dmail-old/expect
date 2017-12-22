@@ -10,7 +10,7 @@ export const createIndexes = (to, from = 0) => {
 
 export const curry = (fn, ...curriedArgs) => (...args) => fn(...[...curriedArgs, ...args])
 
-export const canHaveProperty = value => {
+export const canHaveProperty = (value) => {
 	if (value === null) {
 		return false
 	}
@@ -20,7 +20,7 @@ export const canHaveProperty = value => {
 	return true
 }
 
-export const canHaveOwnProperty = value => {
+export const canSetOwnProperty = (value) => {
 	if (canHaveProperty(value)) {
 		return typeof value === "object" || typeof value === "function"
 	}
@@ -28,7 +28,7 @@ export const canHaveOwnProperty = value => {
 }
 
 export const hasOwnProperty = (value, propertyName) => {
-	if (canHaveOwnProperty(value) === false) {
+	if (canHaveProperty(value) === false) {
 		return false
 	}
 	// using Object.prototype.hasOwnProperty.call to support Object.create(null)
@@ -46,8 +46,8 @@ export const hasProperty = (value, propertyName) => {
 	return hasProperty(valuePrototype, propertyName)
 }
 
-export const getOwnPropertyNamesAndSymbols = value => {
-	if (canHaveOwnProperty(value)) {
+export const getOwnPropertyNamesAndSymbols = (value) => {
+	if (canHaveProperty(value)) {
 		return Object.getOwnPropertyNames(value).concat(Object.getOwnPropertySymbols(value))
 	}
 	return []

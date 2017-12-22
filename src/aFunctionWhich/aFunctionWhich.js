@@ -105,7 +105,6 @@ const parseBehaviours = (behaviours) => {
 		const behaviour = current.behaviour
 		checkDuplicate(accumulator, behaviour)
 		checkOpposite(accumulator, behaviour)
-		debugger
 
 		if (behaviour.split) {
 			return accumulator.concat(parseBehaviours(behaviour.split()))

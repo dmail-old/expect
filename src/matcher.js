@@ -41,8 +41,6 @@ export const createMatcher = ({ match }) => {
 	return matcher
 }
 
-export const isMatcherOf = (matcher, value) => isAssertion(value) && value.matcher === matcher
-
 export const createMatcherFromFunction = (fn, name) => {
 	return createMatcher({
 		match: fn,
