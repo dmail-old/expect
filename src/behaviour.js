@@ -1,10 +1,4 @@
-import {
-	allPredicate,
-	createSignature,
-	spreadPredicate,
-	oneOrMoreArgumentPredicate,
-	oneArgumentPredicate,
-} from "./signature.js"
+import { allPredicate, spreadPredicate, oneOrMoreArgument, oneArgument } from "./signature.js"
 
 export const createBehaviourFactory = (behaviour) => {
 	const factory = (...args) => {
@@ -22,30 +16,25 @@ export const isBehaviour = (value) =>
 
 export const isBehaviourOf = (behaviour, value) => value && value.behaviour === behaviour
 
-const createAllowedBehaviourPredicate = (allowedBehaviours) => (value) => {
-	const allowedBehaviourTypes = allowedBehaviours.map((behaviour) => behaviour.type).join(",")
-
-	return allPredicate(allowedBehaviours, (allowedBehaviour) => {
-		if (isBehaviour(value)) {
-			return `expect a behaviour but got ${value}`
+const createAllowedBehaviourPredicate = (allowedBehaviours) => {
+	return spreadPredicate((arg) => {
+		if (isBehaviour(arg) === false) {
+			return `expect a behaviour but got ${arg}`
 		}
-		if (isBehaviourOf(allowedBehaviour, value) === false) {
-			return `unexpected ${value}, must only be one of ${allowedBehaviourTypes}`
+		const isAllowed = allowedBehaviours.find((allowedBehaviour) => {
+			return isBehaviourOf(allowedBehaviour, arg)
+		})
+		if (isAllowed === false) {
+			return `unexpected behaviour`
 		}
 	})
 }
 
-export const oneAllowedBehaviourSignature = (allowedBehaviours, fn) => {
-	return createSignature(
-		allPredicate(oneArgumentPredicate, createAllowedBehaviourPredicate(allowedBehaviours)),
-	)(fn)
-}
+export const oneAllowedBehaviour = (allowedBehaviours) =>
+	allPredicate(oneArgument, createAllowedBehaviourPredicate(allowedBehaviours))
 
-export const oneOrMoreAllowedBehaviourSignature = (allowedBehaviours, fn) => {
-	return createSignature(
-		allPredicate(
-			oneOrMoreArgumentPredicate,
-			spreadPredicate(createAllowedBehaviourPredicate(allowedBehaviours)),
-		),
-	)(fn)
-}
+export const oneOrMoreAllowedBehaviour = (allowedBehaviours) =>
+	allPredicate(
+		oneOrMoreArgument,
+		spreadPredicate(createAllowedBehaviourPredicate(allowedBehaviours)),
+	)

@@ -21,6 +21,10 @@ export const test = createTest({
 		assertFailedWith(same(null)(true), "expect null but got true")
 		pass()
 	},
+	"same with null, null": ({ pass }) => {
+		assertPassedWith(same(null)(null))
+		pass()
+	},
 	"same with undefined, false": ({ pass }) => {
 		assertFailedWith(same(undefined)(false), "expect undefined but got false")
 		pass()

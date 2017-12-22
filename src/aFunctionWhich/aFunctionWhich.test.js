@@ -8,14 +8,16 @@ const assertPassedWith = (action, value) => {
 	assert.equal(action.getState(), "passed")
 }
 
-const assertFailedWith = (action, value) => {
-	assert.deepEqual(action.getResult(), value)
-	assert.equal(action.getState(), "failed")
-}
+// const assertFailedWith = (action, value) => {
+// 	assert.deepEqual(action.getResult(), value)
+// 	assert.equal(action.getState(), "failed")
+// }
 
 export const test = createTest({
 	"aFunctionWhich returnWith null": ({ pass }) => {
-		assertPassedWith(aFunctionWhich(willReturnWith(null))(() => null))
+		const assertion = aFunctionWhich(willReturnWith(null))
+		const fn = () => null
+		assertPassedWith(assertion(fn))
 		pass()
 	},
 })

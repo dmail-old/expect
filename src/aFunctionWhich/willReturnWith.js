@@ -8,7 +8,6 @@ const willReturnWithBehaviour = {
 	expect: ({ returnedValue }, { observeResultValue }) => {
 		const getResultValue = observeResultValue()
 		const assertReturnValue = createAssertionFrom(returnedValue)
-		debugger
 
 		return () => {
 			return assertReturnValue(getResultValue())

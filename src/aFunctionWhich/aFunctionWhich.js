@@ -20,9 +20,12 @@ aFunctionWhich(
 )
 */
 
-import { createMatcherFromFunction } from "../matcher.js"
+/* eslint-disable import/max-dependencies */
+
+import { createAssertionFromFunction } from "../matcher.js"
 import { sequence } from "@dmail/action"
-import { oneOrMoreAllowedBehaviourSignature } from "../behaviour.js"
+import { sign } from "../signature.js"
+import { oneOrMoreAllowedBehaviour } from "../behaviour.js"
 import { constructedBy } from "../constructedBy/constructedBy.js"
 import { createValueSnapshot, getMutationsFromSnapshot } from "./snapshotValue.js"
 import { createSpySnapshot, getCallsFromSnapshot } from "./snapshotSpy.js"
@@ -113,8 +116,8 @@ const parseBehaviours = (behaviours) => {
 	}, [])
 }
 
-export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
-	[
+export const aFunctionWhich = sign(
+	oneOrMoreAllowedBehaviour([
 		whenCalledWith,
 		willMutatePropertiesOf,
 		willNotMutatePropertiesOf,
@@ -123,7 +126,7 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 		willNotCallSpy,
 		willThrowWith,
 		willReturnWith,
-	],
+	]),
 	(...behaviours) => {
 		let args = []
 		const setArgValues = (values) => {
@@ -180,7 +183,7 @@ export const aFunctionWhich = oneOrMoreAllowedBehaviourSignature(
 			})
 		})
 
-		return createMatcherFromFunction(({ actual }) => {
+		return createAssertionFromFunction(({ actual }) => {
 			return constructedBy(Function)(actual).then(() => {
 				const valueSnapshots = mutationObservers.map(({ value }) => createValueSnapshot(value))
 				const spySnapshots = callObservers.map(({ spy }) => createSpySnapshot(spy))

@@ -1,6 +1,11 @@
 import { createMatcherFromFunction } from "../matcher.js"
 
-const getConstructorName = (value) => {
+const getConstructorName = (constructor) => {
+	const { name } = constructor
+	return name
+}
+
+const getConstructorNameFromValue = (value) => {
 	if (value === null) {
 		return "null"
 	}
@@ -11,7 +16,7 @@ const getConstructorName = (value) => {
 	if (typeof value === "object" && "constructor" in value === false) {
 		return "Object"
 	}
-	const { name } = value.constructor
+	const name = getConstructorName(value.constructor)
 	if (name === "") {
 		if (typeof value === "object") {
 			return "Object"
@@ -41,13 +46,23 @@ const createFailedConstructorMessage = (expected, actual) =>
 	`expect ${prefix(expected)} but got ${prefix(actual)}`
 
 export const constructedBy = createMatcherFromFunction(({ expected, actual, fail, pass }) => {
-	const actualConstructorName = getConstructorName(actual)
-	if (actualConstructorName === expected) {
+	const expectedConstructorName = getConstructorName(expected)
+	const actualConstructorName = getConstructorNameFromValue(actual)
+	if (actualConstructorName === expectedConstructorName) {
 		return pass()
 	}
-	return fail(createFailedConstructorMessage(expected, actualConstructorName, actual))
+	return fail(
+		createFailedConstructorMessage(expectedConstructorName, actualConstructorName, actual),
+	)
 })
 
-export const sameConstructor = createMatcherFromFunction(({ actual, expected }) => {
-	return constructedBy(getConstructorName(expected))(actual)
+export const sameConstructor = createMatcherFromFunction(({ expected, actual, fail, pass }) => {
+	const expectedConstructorName = getConstructorNameFromValue(expected)
+	const actualConstructorName = getConstructorNameFromValue(actual)
+	if (actualConstructorName === expectedConstructorName) {
+		return pass()
+	}
+	return fail(
+		createFailedConstructorMessage(expectedConstructorName, actualConstructorName, actual),
+	)
 })

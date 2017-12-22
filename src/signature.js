@@ -1,13 +1,6 @@
-export const createSignature = (predicate) => (fn) => {
-	const signedFunction = (...args) => {
-		const message = predicate(...args)
-		if (message) {
-			throw new Error(message)
-		}
-		return fn(...args)
-	}
-	return signedFunction
-}
+/*
+it should bebcome a module @dmail/signature
+*/
 
 export const allPredicate = (...predicates) => (...args) => {
 	for (const predicate of predicates) {
@@ -19,12 +12,15 @@ export const allPredicate = (...predicates) => (...args) => {
 }
 
 export const spreadPredicate = (predicate) => (...args) => {
-	for (const arg of args) {
-		const returnValue = predicate(arg)
+	let index = 0
+	while (index < args.length) {
+		const returnValue = predicate(args[index])
 		if (returnValue) {
-			return returnValue
+			return `unexpected arg n°${index}: ${returnValue}`
 		}
+		index++
 	}
+	return false
 }
 
 const createArgumentLengthPredicate = (expectedLength) => (...args) => {
@@ -36,22 +32,25 @@ const createArgumentLengthPredicate = (expectedLength) => (...args) => {
 	}
 }
 
-export const zeroArgumentPredicate = createArgumentLengthPredicate(0)
+export const zeroArgument = createArgumentLengthPredicate(0)
 
-export const oneArgumentPredicate = createArgumentLengthPredicate(1)
+export const oneArgument = createArgumentLengthPredicate(1)
 
-export const twoArgumentPredicate = createArgumentLengthPredicate(2)
+export const twoArgument = createArgumentLengthPredicate(2)
 
-export const oneOrMoreArgumentPredicate = (...args) => {
+export const oneOrMoreArgument = (...args) => {
 	if (args.length === 0) {
 		return `must be called with one or more argument, got 0`
 	}
 }
 
-export const withoutArgumentSignature = createSignature(zeroArgumentPredicate)
-
-export const oneArgumentSignature = createSignature(oneArgumentPredicate)
-
-export const twoArgumentSignature = createSignature(twoArgumentPredicate)
-
-export const oneOrMoreArgumentSignature = createSignature(oneOrMoreArgumentPredicate)
+export const sign = (predicate, fn) => {
+	const signedFunction = (...args) => {
+		const message = predicate(...args)
+		if (message) {
+			throw new Error(message)
+		}
+		return fn(...args)
+	}
+	return signedFunction
+}
