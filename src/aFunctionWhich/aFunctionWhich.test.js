@@ -15,7 +15,8 @@ const assertPassedWith = (action, value) => {
 
 export const test = createTest({
 	"aFunctionWhich returnWith null": ({ pass }) => {
-		const assertion = aFunctionWhich(willReturnWith(null))
+		const behaviour = willReturnWith(null)
+		const assertion = aFunctionWhich(behaviour)
 		const fn = () => null
 		assertPassedWith(assertion(fn))
 		pass()

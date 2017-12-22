@@ -7,12 +7,8 @@ const createUnexpectedMutationsMessage = ({ messages }) => {
 	${messages.join("\n")}`
 }
 
-const willNotMutatePropertiesOfBehaviour = {
-	type: "willNotMutatePropertiesOf",
-	api: (value) => ({ value }),
-	preventDuplicate: true,
-	isDuplicate: (self, other) => self.value === other.value,
-	expect: ({ value }, { observeMutations }) => {
+export const willNotMutatePropertiesOf = createBehaviourFactory((value) => {
+	return ({ observeMutations }) => {
 		const getMutations = observeMutations(value)
 
 		return () => {
@@ -22,7 +18,5 @@ const willNotMutatePropertiesOfBehaviour = {
 			}
 			return passed()
 		}
-	},
-}
-
-export const willNotMutatePropertiesOf = createBehaviourFactory(willNotMutatePropertiesOfBehaviour)
+	}
+})

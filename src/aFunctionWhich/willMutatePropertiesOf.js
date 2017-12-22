@@ -9,12 +9,8 @@ const expectDeletedProperty = {}
 
 export const deleted = () => expectDeletedProperty
 
-const willMutatePropertiesOfBehaviour = {
-	type: "willMutatePropertiesOf",
-	api: (value, properties) => ({ value, properties }),
-	preventDuplicate: true,
-	isDuplicate: (self, other) => self.value === other.value,
-	expect: ({ value, properties }, { observeMutations }) => {
+export const willMutatePropertiesOf = createBehaviourFactory((value, properties) => {
+	return ({ observeMutations }) => {
 		const expectedPropertyMutations = getOwnPropertyNamesAndSymbols(properties)
 		if (expectedPropertyMutations.length === 0) {
 			throw new Error(
@@ -71,7 +67,5 @@ const willMutatePropertiesOfBehaviour = {
 				}
 			})
 		}
-	},
-}
-
-export const willMutatePropertiesOf = createBehaviourFactory(willMutatePropertiesOfBehaviour)
+	}
+})

@@ -1,8 +1,7 @@
 import { createBehaviourFactory } from "../behaviour.js"
 import { failed } from "@dmail/action"
 
-const willThrowWithBehaviour = {
-	type: "willThrowWith",
+export const willThrowWith = createBehaviourFactory({
 	api: (throwedValue) => ({ throwedValue }),
 	preventDuplicate: true,
 	expect: ({ throwedValue }, { observeResultState, observeResultValue }) => {
@@ -17,6 +16,4 @@ const willThrowWithBehaviour = {
 			return throwedValue(getResultValue())
 		}
 	},
-}
-
-export const willThrowWith = createBehaviourFactory(willThrowWithBehaviour)
+})

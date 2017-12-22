@@ -25,7 +25,7 @@ aFunctionWhich(
 import { createAssertionFromFunction } from "../matcher.js"
 import { sequence } from "@dmail/action"
 import { sign } from "../signature.js"
-import { oneOrMoreAllowedBehaviour } from "../behaviour.js"
+import { oneOrMoreAllowedBehaviour, createBehaviourParser } from "../behaviour.js"
 import { constructedBy } from "../constructedBy/constructedBy.js"
 import { createValueSnapshot, getMutationsFromSnapshot } from "./snapshotValue.js"
 import { createSpySnapshot, getCallsFromSnapshot } from "./snapshotSpy.js"
@@ -38,25 +38,13 @@ import { willNotCallSpy } from "./willNotCallSpy.js"
 import { willThrowWith } from "./willThrowWith.js"
 import { willReturnWith } from "./willReturnWith.js"
 
-const preventOpposite = (positive, negative, compare) => {
-	const positiveBehaviour = positive.behaviour
-	const negativeBehaviour = negative.behaviour
+const { preventDuplicate, preventOpposite, parse } = createBehaviourParser()
 
-	positiveBehaviour.opposite = negative
-	negativeBehaviour.opposite = positive
-
-	positiveBehaviour.preventOpposite = true
-	negativeBehaviour.preventOpposite = true
-
-	positiveBehaviour.compareOpposite = compare
-	negativeBehaviour.compareOpposite = compare
-}
-
+preventDuplicate(willMutatePropertiesOf, (a, b) => a.value === b.value)
+preventDuplicate(willNotMutatePropertiesOf, (a, b) => a.value === b.value)
 preventOpposite(willMutatePropertiesOf, willNotMutatePropertiesOf, (a, b) => a.value === b.value)
-
 preventOpposite(willCallSpyWith, willNotCallSpy, (a, b) => a.spy === b.spy)
-
-preventOpposite(willThrowWith, willReturnWith, () => true)
+preventOpposite(willThrowWith, willReturnWith)
 
 const createLazyGetter = (getter) => {
 	const get = () => getter()
@@ -69,51 +57,6 @@ const createLazyGetter = (getter) => {
 		get,
 		set,
 	}
-}
-
-const checkDuplicate = (previousBehaviours, behaviour) => {
-	if (!behaviour.preventDuplicate) {
-		return
-	}
-	const duplicate = previousBehaviours.find((previousBehaviour) => {
-		if (previousBehaviour.behaviour !== behaviour.behaviour) {
-			return false
-		}
-		const { isDuplicate = () => true } = behaviour
-		return isDuplicate(behaviour, previousBehaviour)
-	})
-	if (duplicate) {
-		throw new Error(`${behaviour.type} duplicated`)
-	}
-}
-
-const checkOpposite = (previousBehaviours, behaviour) => {
-	if (!behaviour.preventOpposite || !behaviour.opposite) {
-		return
-	}
-	const opposite = previousBehaviours.find((previousBehaviour) => {
-		if (previousBehaviour.behaviour !== behaviour.opposite) {
-			return false
-		}
-		const { compareOpposite = () => true } = behaviour
-		return compareOpposite(behaviour, previousBehaviour)
-	})
-	if (opposite) {
-		throw new Error(`${behaviour.type} incompatible with previous usage of ${opposite.type}`)
-	}
-}
-
-const parseBehaviours = (behaviours) => {
-	return behaviours.reduce((accumulator, current) => {
-		const behaviour = current.behaviour
-		checkDuplicate(accumulator, behaviour)
-		checkOpposite(accumulator, behaviour)
-
-		if (behaviour.split) {
-			return accumulator.concat(parseBehaviours(behaviour.split()))
-		}
-		return accumulator.concat(behaviour)
-	}, [])
 }
 
 export const aFunctionWhich = sign(
@@ -170,18 +113,20 @@ export const aFunctionWhich = sign(
 			return getResultValue
 		}
 
-		const assertions = parseBehaviours(behaviours).map((behaviour, index, parsedBehaviours) => {
-			return behaviour.expect(behaviour, {
-				getIndex: () => index,
-				getBehaviours: () => parsedBehaviours,
-				setArgValues,
-				getArgValues,
-				observeMutations,
-				observeCalls,
-				observeResultState,
-				observeResultValue,
-			})
-		})
+		const assertions = parse(behaviours, { getArgValues }).map(
+			(accumulator, behaviour, index, behaviours) => {
+				return behaviour.assert({
+					index,
+					behaviours,
+					setArgValues,
+					getArgValues,
+					observeMutations,
+					observeCalls,
+					observeResultState,
+					observeResultValue,
+				})
+			},
+		)
 
 		return createAssertionFromFunction(({ actual }) => {
 			return constructedBy(Function)(actual).then(() => {

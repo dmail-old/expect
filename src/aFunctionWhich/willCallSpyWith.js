@@ -1,4 +1,5 @@
-import { createBehaviourFactory } from "../behaviour.js"
+import { mixin } from "@dmail/mixin"
+import { pureBehaviour, isBehaviourProducedBy } from "../behaviour.js"
 import { failed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 import { exactProperties } from "../properties/properties.js"
@@ -18,59 +19,61 @@ const createExtraCallMessage = ({ spy, calls }) => {
 	${extraCalls.join("\n")}`
 }
 
-const willCallSpyWithBehaviour = {
-	type: "willCallSpyWith",
-	api: (spy, ...argValues) => ({ spy, argValues }),
-	preventDuplicate: false,
-	expect: ({ spy, argValues }, { observeCalls, getIndex, getBehaviours }) => {
-		const expectedSpy = spy
-		const behaviours = getBehaviours()
-		const previousSimilarBehavioursWithSameSpy = behaviours
-			.slice(0, getIndex())
-			.filter((previousBehaviour) => {
-				return (
-					previousBehaviour.behaviour === willCallSpyWithBehaviour && previousBehaviour.spy === spy
-				)
-			})
-		const expectedIndex = previousSimilarBehavioursWithSameSpy.length
+export const willCallSpyWith = (spy, ...argValues) =>
+	mixin(pureBehaviour, () => {
+		return {
+			spy,
+			argValues,
+			assert: ({ observeCalls, index, behaviours }) => {
+				const expectedSpy = spy
+				const previousSimilarBehavioursWithSameSpy = behaviours
+					.slice(0, index)
+					.filter((previousBehaviour) => {
+						return (
+							isBehaviourProducedBy(previousBehaviour, willCallSpyWith) &&
+							previousBehaviour.spy === spy
+						)
+					})
+				const expectedIndex = previousSimilarBehavioursWithSameSpy.length
 
-		const getActualCalls = observeCalls(spy)
+				const getActualCalls = observeCalls(spy)
 
-		return () => {
-			const actualCalls = getActualCalls()
-			const actualCall = actualCalls[expectedIndex]
+				return () => {
+					const actualCalls = getActualCalls()
+					const actualCall = actualCalls[expectedIndex]
 
-			if (!actualCall) {
-				return failed(createMissingCallMessage({ index: expectedIndex, spy, calls: actualCalls }))
-			}
-
-			const actualSpy = actualCall.spy
-			const actualTracker = actualCall.tracker
-
-			if (actualSpy !== expectedSpy) {
-				return failed(`unexpected call to ${actualSpy}, expecting a call to ${expectedSpy}`)
-			}
-
-			const assertArguments = exactProperties(argValues)
-			return assertArguments(actualTracker.createReport().argValues)
-				.then(null, (message) => {
-					return `${actualTracker} call arguments mismatch: ${message}`
-				})
-				.then(() => {
-					const isLastCallSpyWith = behaviours
-						.slice(getIndex())
-						.some(({ behaviour }) => behaviour === willCallSpyWithBehaviour)
-
-					if (isLastCallSpyWith === false) {
-						return
+					if (!actualCall) {
+						return failed(
+							createMissingCallMessage({ index: expectedIndex, spy, calls: actualCalls }),
+						)
 					}
-					const extraCalls = actualCalls.slice(getIndex())
-					if (extraCalls.length) {
-						return failed(createExtraCallMessage({ spy, calls: extraCalls }))
+
+					const actualSpy = actualCall.spy
+					const actualTracker = actualCall.tracker
+
+					if (actualSpy !== expectedSpy) {
+						return failed(`unexpected call to ${actualSpy}, expecting a call to ${expectedSpy}`)
 					}
-				})
+
+					const assertArguments = exactProperties(argValues)
+					return assertArguments(actualTracker.createReport().argValues)
+						.then(null, (message) => {
+							return `${actualTracker} call arguments mismatch: ${message}`
+						})
+						.then(() => {
+							const isLastCallSpyWith = behaviours
+								.slice(index)
+								.some((behaviour) => isBehaviourProducedBy(behaviour, willCallSpyWith))
+
+							if (isLastCallSpyWith === false) {
+								return
+							}
+							const extraCalls = actualCalls.slice(index)
+							if (extraCalls.length) {
+								return failed(createExtraCallMessage({ spy, calls: extraCalls }))
+							}
+						})
+				}
+			},
 		}
-	},
-}
-
-export const willCallSpyWith = createBehaviourFactory(willCallSpyWithBehaviour)
+	})
