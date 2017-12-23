@@ -1,38 +1,41 @@
-import { createFactory, isProducedBy } from "@dmail/mixin"
+import { createFactory, isProductOf, pure } from "@dmail/mixin"
 
-const createTrace = createFactory(({ getParentTrace, getPreviousTrace, name, value, valueOf }) => {
-	const isFirst = () => getPreviousTrace() === null
-	const getDepth = () => {
-		const parentTrace = getParentTrace()
-		return parentTrace ? parentTrace.getDepth() + 1 : 0
-	}
-	const getName = () => name
-	const getValue = () => value
-	let lastPropertyTrace
-	const discoverProperty = (name) => {
-		const parentTrace = valueOf()
-		const previousPropertyTrace = lastPropertyTrace || parentTrace
+const createTrace = createFactory(
+	pure,
+	({ getParentTrace, getPreviousTrace, name, value, valueOf }) => {
+		const isFirst = () => getPreviousTrace() === null
+		const getDepth = () => {
+			const parentTrace = getParentTrace()
+			return parentTrace ? parentTrace.getDepth() + 1 : 0
+		}
+		const getName = () => name
+		const getValue = () => value
+		let lastPropertyTrace
+		const discoverProperty = (name) => {
+			const parentTrace = valueOf()
+			const previousPropertyTrace = lastPropertyTrace || parentTrace
 
-		lastPropertyTrace = createTrace({
-			getParentTrace: () => parentTrace,
-			getPreviousTrace: () => previousPropertyTrace,
-			name,
-			value: value[name],
-		})
+			lastPropertyTrace = createTrace({
+				getParentTrace: () => parentTrace,
+				getPreviousTrace: () => previousPropertyTrace,
+				name,
+				value: value[name],
+			})
 
-		return lastPropertyTrace
-	}
+			return lastPropertyTrace
+		}
 
-	return {
-		isFirst,
-		getDepth,
-		getName,
-		getValue,
-		discoverProperty,
-	}
-})
+		return {
+			isFirst,
+			getDepth,
+			getName,
+			getValue,
+			discoverProperty,
+		}
+	},
+)
 
-export const isTrace = (value) => isProducedBy(createTrace, value)
+export const isTrace = (value) => isProductOf(createTrace, value)
 
 export const createNamedTrace = (value, name) => {
 	return createTrace({

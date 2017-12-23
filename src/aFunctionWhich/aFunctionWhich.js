@@ -22,6 +22,7 @@ aFunctionWhich(
 
 /* eslint-disable import/max-dependencies */
 
+import { isProductOf } from "@dmail/mixin"
 import { createAssertionFromFunction } from "../matcher.js"
 import { sequence } from "@dmail/action"
 import { sign } from "../signature.js"
@@ -29,21 +30,21 @@ import { oneOrMoreAllowedBehaviour, createBehaviourParser } from "../behaviour.j
 import { constructedBy } from "../constructedBy/constructedBy.js"
 import { createValueSnapshot, getMutationsFromSnapshot } from "./snapshotValue.js"
 import { createSpySnapshot, getCallsFromSnapshot } from "./snapshotSpy.js"
-import { whenCalledWith } from "./whenCalledWith.js"
-import { willMutatePropertiesOf } from "./willMutatePropertiesOf.js"
-import { willNotMutatePropertiesOf } from "./willNotMutatePropertiesOf.js"
-import { willMutateArguments } from "./willMutateArguments.js"
-import { willCallSpyWith } from "./willCallSpyWith.js"
-import { willNotCallSpy } from "./willNotCallSpy.js"
+// import { whenCalledWith } from "./whenCalledWith.js"
+// import { willMutatePropertiesOf } from "./willMutatePropertiesOf.js"
+// import { willNotMutatePropertiesOf } from "./willNotMutatePropertiesOf.js"
+// import { willMutateArguments } from "./willMutateArguments.js"
+// import { willCallSpyWith } from "./willCallSpyWith.js"
+// import { willNotCallSpy } from "./willNotCallSpy.js"
 import { willThrowWith } from "./willThrowWith.js"
 import { willReturnWith } from "./willReturnWith.js"
 
-const { preventDuplicate, preventOpposite, parse } = createBehaviourParser()
+const { /* preventDuplicate,*/ preventOpposite, parse } = createBehaviourParser()
 
-preventDuplicate(willMutatePropertiesOf, (a, b) => a.value === b.value)
-preventDuplicate(willNotMutatePropertiesOf, (a, b) => a.value === b.value)
-preventOpposite(willMutatePropertiesOf, willNotMutatePropertiesOf, (a, b) => a.value === b.value)
-preventOpposite(willCallSpyWith, willNotCallSpy, (a, b) => a.spy === b.spy)
+// preventDuplicate(willMutatePropertiesOf, (a, b) => a.value === b.value)
+// preventDuplicate(willNotMutatePropertiesOf, (a, b) => a.value === b.value)
+// preventOpposite(willMutatePropertiesOf, willNotMutatePropertiesOf, (a, b) => a.value === b.value)
+// preventOpposite(willCallSpyWith, willNotCallSpy, (a, b) => a.spy === b.spy)
 preventOpposite(willThrowWith, willReturnWith)
 
 const createLazyGetter = (getter) => {
@@ -59,14 +60,24 @@ const createLazyGetter = (getter) => {
 	}
 }
 
+const createUnexpectedBehaviourMessage = ({ fn, behaviour, message }) => {
+	const functionName = fn.name ? `${fn.name} function` : "function"
+
+	if (isProductOf(willReturnWith, behaviour)) {
+		return `unexpected ${functionName} return value:
+${message}`
+	}
+	return message
+}
+
 export const aFunctionWhich = sign(
 	oneOrMoreAllowedBehaviour([
-		whenCalledWith,
-		willMutatePropertiesOf,
-		willNotMutatePropertiesOf,
-		willMutateArguments,
-		willCallSpyWith,
-		willNotCallSpy,
+		// whenCalledWith,
+		// willMutatePropertiesOf,
+		// willNotMutatePropertiesOf,
+		// willMutateArguments,
+		// willCallSpyWith,
+		// willNotCallSpy,
 		willThrowWith,
 		willReturnWith,
 	]),
@@ -113,20 +124,20 @@ export const aFunctionWhich = sign(
 			return getResultValue
 		}
 
-		const assertions = parse(behaviours, { getArgValues }).map(
-			(accumulator, behaviour, index, behaviours) => {
-				return behaviour.assert({
-					index,
-					behaviours,
-					setArgValues,
-					getArgValues,
-					observeMutations,
-					observeCalls,
-					observeResultState,
-					observeResultValue,
-				})
-			},
-		)
+		behaviours = parse(behaviours, { getArgValues })
+
+		const assertions = behaviours.map((behaviour, index) => {
+			return behaviour.assert({
+				index,
+				behaviours,
+				setArgValues,
+				getArgValues,
+				observeMutations,
+				observeCalls,
+				observeResultState,
+				observeResultValue,
+			})
+		})
 
 		return createAssertionFromFunction(({ actual }) => {
 			return constructedBy(Function)(actual).then(() => {
@@ -159,7 +170,12 @@ export const aFunctionWhich = sign(
 					set(() => getCallsFromSnapshot(spySnapshots[index], spy))
 				})
 
-				return sequence(assertions, (assertion) => assertion())
+				return sequence(assertions, (assertion, index) => {
+					return assertion().then(null, (message) => {
+						const behaviour = behaviours[index]
+						return createUnexpectedBehaviourMessage({ fn: actual, behaviour, message })
+					})
+				}).then(() => undefined)
 			})
 		})
 	},

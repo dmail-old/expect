@@ -19,8 +19,8 @@
 		"node": ">=8.6.0"
 	},
 	"dependencies": {
-		"@dmail/action": "1.7.0",
-		"@dmail/mixin": "3.0.0",
+		"@dmail/action": "2.0.0",
+		"@dmail/mixin": "4.0.0",
 		"@dmail/spy": "0.0.2",
 		"@dmail/uneval": "1.0.0"
 	},

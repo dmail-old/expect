@@ -1,12 +1,11 @@
-import { mixin, pure, hasTalent } from "@dmail/mixin"
+import { createFactory, pure, isProductOf } from "@dmail/mixin"
 import { allPredicate, spreadPredicate, oneOrMoreArgument, oneArgument } from "./signature.js"
 
-const behaviourTalent = () => {}
-export const pureBehaviour = mixin(pure, behaviourTalent)
+const createBehaviour = createFactory(pure, () => {})
 
-const isBehaviour = (value) => hasTalent(behaviourTalent, value)
+export const pureBehaviour = createBehaviour()
 
-export const isBehaviourProducedBy = (factory, behaviour) => behaviour.factory === factory
+const isBehaviour = (value) => isProductOf(createBehaviour, value)
 
 const createAllowedBehaviourPredicate = (allowedBehaviourFactories) => {
 	return spreadPredicate((arg) => {
@@ -14,7 +13,7 @@ const createAllowedBehaviourPredicate = (allowedBehaviourFactories) => {
 			return `expect a behaviour but got ${arg}`
 		}
 		const isAllowed = allowedBehaviourFactories.find((behaviourFactory) => {
-			return isBehaviourProducedBy(arg, behaviourFactory)
+			return isProductOf(behaviourFactory, arg)
 		})
 		if (isAllowed === false) {
 			return `unexpected behaviour`
@@ -37,13 +36,12 @@ export const createBehaviourParser = () => {
 
 	const preventDuplicate = (behaviourFactory, compare = () => true) => {
 		rules.push((previousBehaviours, behaviour) => {
-			if (isBehaviourProducedBy(behaviour, behaviourFactory) === false) {
+			if (isProductOf(behaviourFactory, behaviour) === false) {
 				return
 			}
 			const existingBehaviour = previousBehaviours.find((previousBehaviour) => {
 				return (
-					isBehaviourProducedBy(previousBehaviour, behaviourFactory) &&
-					compare(behaviour, previousBehaviour)
+					isProductOf(behaviourFactory, previousBehaviour) && compare(behaviour, previousBehaviour)
 				)
 			})
 			if (existingBehaviour) {
@@ -58,12 +56,13 @@ export const createBehaviourParser = () => {
 		compare = () => true,
 	) => {
 		rules.push((previousBehaviours, behaviour) => {
-			if (isBehaviourProducedBy(behaviour, positiveBehaviourFactory) === false) {
+			if (isProductOf(positiveBehaviourFactory, behaviour) === false) {
 				return
 			}
 			const opposite = previousBehaviours.find((previousBehaviour) => {
 				return (
-					isBehaviourProducedBy(negativeBehaviourFactory) && compare(behaviour, previousBehaviour)
+					isProductOf(negativeBehaviourFactory, previousBehaviour) &&
+					compare(behaviour, previousBehaviour)
 				)
 			})
 			if (opposite) {
@@ -76,12 +75,13 @@ export const createBehaviourParser = () => {
 		})
 
 		rules.push((previousBehaviours, behaviour) => {
-			if (isBehaviourProducedBy(behaviour, negativeBehaviourFactory) === false) {
+			if (isProductOf(negativeBehaviourFactory, behaviour) === false) {
 				return
 			}
 			const opposite = previousBehaviours.find((previousBehaviour) => {
 				return (
-					isBehaviourProducedBy(positiveBehaviourFactory) && compare(behaviour, previousBehaviour)
+					isProductOf(positiveBehaviourFactory, previousBehaviour) &&
+					compare(behaviour, previousBehaviour)
 				)
 			})
 			if (opposite) {
