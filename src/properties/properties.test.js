@@ -27,22 +27,22 @@ export const test = createTest({
 	"called without argument": ({ pass }) => {
 		assert.throws(
 			() => exactProperties(),
-			(e) => e.message === `must be called with 1 argument, got 0`,
+			(e) => e.message === `1 argument missing, must be called with 1 argument`,
 		)
 		assert.throws(
 			() => theseProperties(),
-			(e) => e.message === `must be called with 1 argument, got 0`,
+			(e) => e.message === `1 argument missing, must be called with 1 argument`,
 		)
 		pass()
 	},
 	"called with 2 argument": ({ pass }) => {
 		assert.throws(
 			() => exactProperties(true, true),
-			(e) => e.message === `must be called with 1 argument, got 2`,
+			(e) => e.message === `1 unexpected argument, must be called with 1 argument`,
 		)
 		assert.throws(
 			() => theseProperties(true, true),
-			(e) => e.message === `must be called with 1 argument, got 2`,
+			(e) => e.message === `1 unexpected argument, must be called with 1 argument`,
 		)
 		pass()
 	},
@@ -61,10 +61,22 @@ export const test = createTest({
 		const createExtraFoo = () => {
 			return {
 				expected: null,
-				actual: { foo: true },
+				actual: { foo: true, bar: false },
 			}
 		}
-		assertFailure(exactProperties, createExtraFoo, "unexpected property foo on value")
+		assertFailure(
+			exactProperties,
+			createExtraFoo,
+			`2 unexpected property on value:
+
+foo:
+true
+
+bar:
+false
+
+`,
+		)
 		assertSuccess(theseProperties, createExtraFoo)
 		pass()
 	},
@@ -98,8 +110,15 @@ export const test = createTest({
 				actual: Object.create(actualPrototype),
 			}
 		}
-		assertFailure(exactProperties, factory, "value foo mismatch: expect true but got false")
-		assertFailure(theseProperties, factory, "value foo mismatch: expect true but got false")
+		const message = `unexpected value foo:
+actual is:
+false
+
+when expecting:
+true
+`
+		assertFailure(exactProperties, factory, message)
+		assertFailure(theseProperties, factory, message)
 		pass()
 	},
 	"on actual having mismatching expected anonymous symbol": ({ pass }) => {
@@ -114,8 +133,15 @@ export const test = createTest({
 				},
 			}
 		}
-		assertFailure(exactProperties, factory, "value Symbol() mismatch: expect true but got false")
-		assertFailure(theseProperties, factory, "value Symbol() mismatch: expect true but got false")
+		const message = `unexpected value Symbol():
+actual is:
+false
+
+when expecting:
+true
+`
+		assertFailure(exactProperties, factory, message)
+		assertFailure(theseProperties, factory, message)
 		pass()
 	},
 	"on actual having inherited expect named symbol at property": ({ pass }) => {
@@ -131,8 +157,15 @@ export const test = createTest({
 				actual: Object.create(actualPrototype),
 			}
 		}
-		assertFailure(exactProperties, factory, "value Symbol(foo) mismatch: expect true but got false")
-		assertFailure(theseProperties, factory, "value Symbol(foo) mismatch: expect true but got false")
+		const message = `unexpected value Symbol(foo):
+actual is:
+false
+
+when expecting:
+true
+`
+		assertFailure(exactProperties, factory, message)
+		assertFailure(theseProperties, factory, message)
 		pass()
 	},
 	"on empty objects": ({ pass }) => {
@@ -177,16 +210,16 @@ export const test = createTest({
 			}
 		}
 
-		assertFailure(
-			exactProperties,
-			createMismatchingNestedObject,
-			"value foo bar mismatch: expect false but got true",
-		)
-		assertFailure(
-			theseProperties,
-			createMismatchingNestedObject,
-			"value foo bar mismatch: expect false but got true",
-		)
+		const message = `unexpected value foo bar:
+actual is:
+true
+
+when expecting:
+false
+`
+
+		assertFailure(exactProperties, createMismatchingNestedObject, message)
+		assertFailure(theseProperties, createMismatchingNestedObject, message)
 		pass()
 	},
 	"on extra nested property": ({ pass }) => {
@@ -200,7 +233,12 @@ export const test = createTest({
 		assertFailure(
 			exactProperties,
 			createNestedExtraProperty,
-			"unexpected property bar on value foo",
+			`1 unexpected property on value foo:
+
+bar:
+true
+
+`,
 		)
 		assertSuccess(theseProperties, createNestedExtraProperty)
 
@@ -238,16 +276,16 @@ export const test = createTest({
 			}
 		}
 
-		assertFailure(
-			exactProperties,
-			createCircularStructureContainingMismatch,
-			"value foo bar mismatch: expect false but got true",
-		)
-		assertFailure(
-			theseProperties,
-			createCircularStructureContainingMismatch,
-			"value foo bar mismatch: expect false but got true",
-		)
+		const message = `unexpected value foo bar:
+actual is:
+true
+
+when expecting:
+false
+`
+
+		assertFailure(exactProperties, createCircularStructureContainingMismatch, message)
+		assertFailure(theseProperties, createCircularStructureContainingMismatch, message)
 		pass()
 	},
 	"on missing nested circular structure": ({ pass }) => {
@@ -271,16 +309,16 @@ export const test = createTest({
 			}
 		}
 
-		assertFailure(
-			exactProperties,
-			createMissingNestedCircularStructure,
-			"expect value foo aaa to be a pointer to value but got an object",
-		)
-		assertFailure(
-			theseProperties,
-			createMissingNestedCircularStructure,
-			"expect value foo aaa to be a pointer to value but got an object",
-		)
+		const message = `unexpected value foo aaa:
+actual is:
+{}
+
+when expecting:
+a pointer to value
+`
+
+		assertFailure(exactProperties, createMissingNestedCircularStructure, message)
+		assertFailure(theseProperties, createMissingNestedCircularStructure, message)
 		pass()
 	},
 	"on unexpected nested circular structure": ({ pass }) => {
@@ -304,16 +342,16 @@ export const test = createTest({
 			}
 		}
 
-		assertFailure(
-			exactProperties,
-			createExtraNestedCircularStructure,
-			`expect value foo aaa to be an object but got a pointer to value`,
-		)
-		assertFailure(
-			theseProperties,
-			createExtraNestedCircularStructure,
-			`expect value foo aaa to be an object but got a pointer to value`,
-		)
+		const message = `unexpected value foo aaa:
+actual is:
+a pointer to value
+
+when expecting:
+{}
+`
+
+		assertFailure(exactProperties, createExtraNestedCircularStructure, message)
+		assertFailure(theseProperties, createExtraNestedCircularStructure, message)
 		pass()
 	},
 	"on named arrow function": ({ pass }) => {
@@ -324,16 +362,16 @@ export const test = createTest({
 			}
 		}
 
-		assertFailure(
-			exactProperties,
-			createTwoArrowFunctionsWithDifferentNames,
-			`value name mismatch: expect "expected" but got "actual"`,
-		)
-		assertFailure(
-			theseProperties,
-			createTwoArrowFunctionsWithDifferentNames,
-			`value name mismatch: expect "expected" but got "actual"`,
-		)
+		const message = `unexpected value name:
+actual is:
+"actual"
+
+when expecting:
+"expected"
+`
+
+		assertFailure(exactProperties, createTwoArrowFunctionsWithDifferentNames, message)
+		assertFailure(theseProperties, createTwoArrowFunctionsWithDifferentNames, message)
 		pass()
 	},
 	"on anonymous arrow function": ({ pass }) => {
@@ -381,16 +419,10 @@ export const test = createTest({
 			}
 		}
 
-		assertFailure(
-			exactProperties,
-			createNestedMissingHiddenProperty,
-			"missing property bar on value foo",
-		)
-		assertFailure(
-			theseProperties,
-			createNestedMissingHiddenProperty,
-			"missing property bar on value foo",
-		)
+		const message = `missing property bar on value foo`
+
+		assertFailure(exactProperties, createNestedMissingHiddenProperty, message)
+		assertFailure(theseProperties, createNestedMissingHiddenProperty, message)
 		pass()
 	},
 	"on mismatch on hidden nested property": ({ pass }) => {
@@ -408,16 +440,16 @@ export const test = createTest({
 			return { expected, actual }
 		}
 
-		assertFailure(
-			exactProperties,
-			createMisMatchingHiddenProperty,
-			"value foo bar mismatch: expect true but got false",
-		)
-		assertFailure(
-			theseProperties,
-			createMisMatchingHiddenProperty,
-			"value foo bar mismatch: expect true but got false",
-		)
+		const message = `unexpected value foo bar:
+actual is:
+false
+
+when expecting:
+true
+`
+
+		assertFailure(exactProperties, createMisMatchingHiddenProperty, message)
+		assertFailure(theseProperties, createMisMatchingHiddenProperty, message)
 		pass()
 	},
 	"on custom assertion": ({ pass }) => {

@@ -34,9 +34,9 @@ const createArgumentLengthPredicate = (expectedLength) => (...args) => {
 
 	if (extraArgumentCount > 0) {
 		if (expectedLength === 0) {
-			return `${extraArgumentCount} unexpected arguments, must be called without argument`
+			return `${extraArgumentCount} unexpected argument, must be called without argument`
 		}
-		return `${extraArgumentCount} unexpected arguments, must be called with ${expectedLength} argument`
+		return `${extraArgumentCount} unexpected argument, must be called with ${expectedLength} argument`
 	}
 	if (missingArgumentCount > 0) {
 		return `${missingArgumentCount} argument missing, must be called with ${expectedLength} argument`

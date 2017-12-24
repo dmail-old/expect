@@ -1,9 +1,9 @@
 import { sequence, passed, failed } from "@dmail/action"
 import { isAssertion, createMatcherFromFunction } from "../matcher.js"
 import { is } from "../is/is.js"
-import { getOwnPropertyNamesAndSymbols, hasProperty, canHaveProperty } from "../helper.js"
+import { getOwnPropertyNamesAndSymbols, hasProperty, canSetOwnProperty } from "../helper.js"
 import { createAnonymousTrace, getPointerFromTrace, comparePointer } from "../trace/trace.js"
-import { prefixValue } from "../constructedBy/constructedBy.js"
+import { uneval } from "@dmail/uneval"
 
 const getValueNameFromTrace = ({ getName, getParentTrace }) => {
 	const name = getName()
@@ -31,25 +31,47 @@ const failureMessageCreators = {
 		)}`
 	},
 	mismatch: ({ expectedTrace, message }) => {
-		return `${getValueNameFromTrace(expectedTrace)} mismatch: ${message}`
+		return `unexpected ${getValueNameFromTrace(expectedTrace)}:
+${message}`
 	},
 	"missing-pointer": ({ expectedTrace, expectedPointer, actual }) => {
-		return `expect ${getValueNameFromTrace(expectedTrace)} to be a pointer to ${getPointerName(
-			expectedPointer,
-		)} but got ${prefixValue(actual)}`
+		return `unexpected ${getValueNameFromTrace(expectedTrace)}:
+actual is:
+${uneval(actual)}
+
+when expecting:
+a pointer to ${getPointerName(expectedPointer)}
+`
 	},
 	"unexpected-pointer": ({ expectedTrace, expected, actualPointer }) => {
-		return `expect ${getValueNameFromTrace(expectedTrace)} to be ${prefixValue(
-			expected,
-		)} but got a pointer to ${getPointerName(actualPointer)}`
+		return `unexpected ${getValueNameFromTrace(expectedTrace)}:
+actual is:
+a pointer to ${getPointerName(actualPointer)}
+
+when expecting:
+${uneval(expected)}
+`
 	},
 	"pointer-mismatch": ({ expectedTrace, expectedPointer, actualPointer }) => {
-		return `expect ${getValueNameFromTrace(expectedTrace)} to be a pointer to ${getPointerName(
-			expectedPointer,
-		)} but got a pointer to ${getPointerName(actualPointer)}`
+		return `unexpected ${getValueNameFromTrace(expectedTrace)}:
+actual is:
+a pointer to ${getPointerName(expectedPointer)}
+
+when expecting:
+a pointer to ${getPointerName(actualPointer)}
+`
 	},
-	"unexpected-property": ({ expectedTrace, name }) => {
-		return `unexpected property ${name} on ${getValueNameFromTrace(expectedTrace)}`
+	"unexpected-properties": ({ expectedTrace, properties, actual }) => {
+		const propertiesMessages = properties.map((property) => {
+			return `
+${property}:
+${uneval(actual[property])}
+`
+		})
+
+		return `${properties.length} unexpected property on ${getValueNameFromTrace(expectedTrace)}:
+${propertiesMessages.join("")}
+`
 	},
 }
 
@@ -89,10 +111,13 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 				)
 			}
 
-			const expectedCanHaveProperty = canHaveProperty(expected)
-			const actualCanHaveProperty = canHaveProperty(actual)
+			const expectedCanSetOwnProperty = canSetOwnProperty(expected)
+			const actualCanSetOwnProperty = canSetOwnProperty(actual)
 
-			if (expectedCanHaveProperty !== actualCanHaveProperty || expectedCanHaveProperty === false) {
+			if (
+				expectedCanSetOwnProperty !== actualCanSetOwnProperty ||
+				expectedCanSetOwnProperty === false
+			) {
 				return is(expected)(actual).then(null, (message) =>
 					failed({
 						type: "mismatch",
@@ -143,7 +168,7 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 			if (allowExtra) {
 				return passed()
 			}
-			const actualExtraPropertyNameOrSymbol = getOwnPropertyNamesAndSymbols(actualOwner).find(
+			const extraPropertyNameOrSymbols = getOwnPropertyNamesAndSymbols(actualOwner).filter(
 				(name) => {
 					if (hasProperty(expectedOwner, name)) {
 						return false
@@ -154,11 +179,12 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 					return true
 				},
 			)
-			if (actualExtraPropertyNameOrSymbol) {
+			if (extraPropertyNameOrSymbols.length) {
 				return failed({
-					type: "unexpected-property",
+					type: "unexpected-properties",
 					expectedTrace: expectedOwnerTrace,
-					name: actualExtraPropertyNameOrSymbol,
+					actual: actualOwner,
+					properties: extraPropertyNameOrSymbols,
 				})
 			}
 			return passed()

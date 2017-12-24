@@ -2,12 +2,10 @@ import { createMatcherFromFunction } from "../matcher.js"
 import { uneval } from "@dmail/uneval"
 
 const createIsFailureMessage = (expected, actual) =>
-	`actual is
-
+	`actual is:
 ${uneval(actual)}
 
-when expecting
-
+when expecting:
 ${uneval(expected)}
 `
 

@@ -34,18 +34,19 @@ import { createSpySnapshot, getCallsFromSnapshot } from "./snapshotSpy.js"
 // import { willMutatePropertiesOf } from "./willMutatePropertiesOf.js"
 // import { willNotMutatePropertiesOf } from "./willNotMutatePropertiesOf.js"
 // import { willMutateArguments } from "./willMutateArguments.js"
-// import { willCallSpyWith } from "./willCallSpyWith.js"
-// import { willNotCallSpy } from "./willNotCallSpy.js"
+import { willCallSpyWith } from "./willCallSpyWith.js"
+import { willNotCallSpy } from "./willNotCallSpy.js"
 import { willThrowWith } from "./willThrowWith.js"
 import { willReturnWith } from "./willReturnWith.js"
 
-const { /* preventDuplicate,*/ preventOpposite, parse } = createBehaviourParser()
+const { preventDuplicate, preventOpposite, parse } = createBehaviourParser()
 
 // preventDuplicate(willMutatePropertiesOf, (a, b) => a.value === b.value)
 // preventDuplicate(willNotMutatePropertiesOf, (a, b) => a.value === b.value)
 // preventOpposite(willMutatePropertiesOf, willNotMutatePropertiesOf, (a, b) => a.value === b.value)
-// preventOpposite(willCallSpyWith, willNotCallSpy, (a, b) => a.spy === b.spy)
+preventOpposite(willCallSpyWith, willNotCallSpy, (a, b) => a.spy === b.spy)
 preventOpposite(willThrowWith, willReturnWith)
+preventDuplicate(willThrowWith, willReturnWith)
 
 const createLazyGetter = (getter) => {
 	const get = () => getter()
@@ -76,8 +77,8 @@ export const aFunctionWhich = sign(
 		// willMutatePropertiesOf,
 		// willNotMutatePropertiesOf,
 		// willMutateArguments,
-		// willCallSpyWith,
-		// willNotCallSpy,
+		willCallSpyWith,
+		willNotCallSpy,
 		willThrowWith,
 		willReturnWith,
 	]),

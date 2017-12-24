@@ -14,7 +14,10 @@ export const getCallsFromSnapshot = ({ getCallCount }, spy) => {
 	let callIndex = callCountSnapshot
 
 	while (callIndex !== callCount) {
-		calls.push(spy.track(callIndex))
+		calls.push({
+			spy,
+			tracker: spy.track(callIndex),
+		})
 		callIndex++
 	}
 

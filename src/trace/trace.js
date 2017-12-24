@@ -1,15 +1,20 @@
-import { createFactory, isProductOf, pure } from "@dmail/mixin"
+import { createFactory, pure, isProductOf } from "@dmail/mixin"
 
 const createTrace = createFactory(
 	pure,
+	(options) => options,
 	({ getParentTrace, getPreviousTrace, name, value, valueOf }) => {
 		const isFirst = () => getPreviousTrace() === null
+
 		const getDepth = () => {
 			const parentTrace = getParentTrace()
 			return parentTrace ? parentTrace.getDepth() + 1 : 0
 		}
+
 		const getName = () => name
+
 		const getValue = () => value
+
 		let lastPropertyTrace
 		const discoverProperty = (name) => {
 			const parentTrace = valueOf()

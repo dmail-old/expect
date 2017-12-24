@@ -18,7 +18,15 @@ export const test = createTest({
 		pass()
 	},
 	"is with true, false": ({ pass }) => {
-		assertFailedWith(is(true)(false), "expect true but got false")
+		assertFailedWith(
+			is(true)(false),
+			`actual is:
+true
+
+when expecting:
+false
+`,
+		)
 		pass()
 	},
 })
