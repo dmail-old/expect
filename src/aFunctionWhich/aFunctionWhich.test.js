@@ -29,12 +29,10 @@ export const test = createTest({
 		assertFailedWith(
 			assertion(fn),
 			`unexpected fn function return value:
-actual is
-
+actual is:
 undefined
 
-when expecting
-
+when expecting:
 null
 `,
 		)
@@ -42,10 +40,34 @@ null
 	},
 
 	"willCallSpyWith 0, 1": ({ pass }) => {
-		const spy = createSpy()
+		const spy = createSpy("spy")
 		const fn = () => spy(0, 1)
 		const assertion = aFunctionWhich(willCallSpyWith(spy, 0, 1))
 		assertPassedWith(assertion(fn))
+		pass()
+	},
+
+	"willCallSpyWith 0, 1 and extra call": ({ pass }) => {
+		const spy = createSpy("test")
+		const fn = () => {
+			spy(0, 1)
+			spy("foo", "bar")
+			spy("beee")
+		}
+		const assertion = aFunctionWhich(willCallSpyWith(spy, 0, 1))
+		assertFailedWith(
+			assertion(fn),
+			`2 extra call to test spy:
+[
+	"foo",
+	"bar"
+]
+
+[
+	"beee"
+]
+`,
+		)
 		pass()
 	},
 })

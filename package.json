@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"@dmail/action": "2.0.0",
-		"@dmail/mixin": "4.0.0",
+		"@dmail/mixin": "5.2.0",
 		"@dmail/spy": "0.0.2",
 		"@dmail/uneval": "1.0.0"
 	},

@@ -13,16 +13,12 @@ const createMissingCallMessage = ({ spy, calls }) => {
 
 const createExtraCallMessage = ({ spy, calls }) => {
 	// we should limit the number of extra calls displayed (like 3 and add a sentend like and 345 more)
-	const extraCalls = calls.map((call, index) => {
+	const extraCalls = calls.map((call) => {
 		return `
-call n°${index}:
 ${uneval(call.tracker.createReport().argValues)}
 `
 	})
-	return `${calls.length} extra call to ${spy}:
-
-${extraCalls.join("")}
-`
+	return `${calls.length} extra call to ${spy}:${extraCalls.join("")}`
 }
 
 const createUnexpectedCallArguments = ({ tracker, message }) => {
@@ -73,7 +69,7 @@ export const willCallSpyWith = createFactory(pureBehaviour, (spy, ...argValues) 
 						if (isLastCallSpyWith === false) {
 							return
 						}
-						const extraCalls = actualCalls.slice(index)
+						const extraCalls = actualCalls.slice(index + 1)
 						if (extraCalls.length) {
 							return failed(createExtraCallMessage({ spy, calls: extraCalls }))
 						}
