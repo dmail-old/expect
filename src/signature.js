@@ -18,9 +18,8 @@ export const spreadPredicate = (predicate) => (...args) => {
 	while (index < args.length) {
 		const returnValue = predicate(args[index])
 		if (returnValue) {
-			return `unexpected arg n°${index}.
-
-			${returnValue}`
+			return `unexpected arg n°${index}:
+${returnValue}`
 		}
 		index++
 	}
