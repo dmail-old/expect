@@ -64,21 +64,13 @@ const createLazyGetter = (getter) => {
 const createUnexpectedBehaviourMessage = ({ fn, behaviour, param }) => {
 	const functionName = fn.name ? `${fn.name} function` : "function"
 
-	if (behaviour.createExpectedDescription) {
-		return `actual:
+	return `${behaviour.createValueDescription({ fn: functionName, ...param })} mismatch.
+actual:
 ${behaviour.createActualDescription({ fn: functionName, ...param })}
 
 expected:
 ${behaviour.createExpectedDescription({ fn: functionName })}
 `
-	}
-
-	if (isProductOf(willReturnWith, behaviour)) {
-		return `unexpected ${functionName} return value:
-${param}`
-	}
-
-	return param
 }
 
 export const aFunctionWhich = sign(

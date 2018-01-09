@@ -3,29 +3,39 @@ import { pureBehaviour } from "../behaviour.js"
 import { failed } from "@dmail/action"
 import { uneval } from "@dmail/uneval"
 import { exactProperties } from "../properties/properties.js"
+import { limitLines } from "./limitLines.js"
 
-const createMissingCallMessage = ({ spy, calls }) => {
-	if (calls.length === 0) {
-		return `missing call to ${spy} which was never called`
-	}
-	return `missing call to ${spy} which was called ${calls.length} times`
-}
-
-const createExtraCallMessage = ({ spy, calls }) => {
-	// we should limit the number of extra calls displayed (like 3 and add a sentend like and 345 more)
-	const extraCalls = calls.map((call) => {
-		return `${uneval(call.tracker.createReport().argValues)}`
-	})
-	return `${calls.length} extra call to ${spy}:${extraCalls.join("\n")}`
-}
-
-const createUnexpectedCallArguments = ({ tracker, message }) => {
-	return `${tracker} call arguments mismatch:
-${message}`
-}
+const createExtraCallMessage = limitLines({
+	createIntro: ({ calls, spy }) => `${calls.length} extra calls to ${spy}`,
+	getLines: ({ calls }) => calls,
+	createLine: (call) => `${uneval(call.tracker.createReport().argValues)}`,
+})
 
 export const willCallSpyWith = createFactory(pureBehaviour, (spy, ...argValues) => {
 	const assertArguments = exactProperties(argValues)
+
+	const createExpectedDescription = ({ fn }) => {
+		return `${fn} must call ${spy} with ${uneval(argValues)}`
+	}
+
+	const createActualDescription = ({ fn, type, actualSpy, index, calls, message }) => {
+		if (type === "missing") {
+			return `missing call n°${index} on ${spy} by ${fn}`
+		}
+
+		if (type === "unexpected") {
+			return `${fn} call to ${actualSpy}`
+		}
+
+		if (type === "mismatch") {
+			// faudrait qu'on sache quel argument est fucked
+			return `${fn} call to ${spy} arguments mismatch ${message}`
+		}
+
+		if (type === "extra") {
+			return createExtraCallMessage({ calls, spy })
+		}
+	}
 
 	const assert = ({ observeCalls, index, behaviours }) => {
 		const expectedSpy = spy
@@ -42,19 +52,19 @@ export const willCallSpyWith = createFactory(pureBehaviour, (spy, ...argValues) 
 			const actualCall = actualCalls[expectedIndex]
 
 			if (!actualCall) {
-				return failed(createMissingCallMessage({ index: expectedIndex, spy, calls: actualCalls }))
+				return failed({ type: "missing", index: expectedIndex })
 			}
 
 			const actualSpy = actualCall.spy
 			const actualTracker = actualCall.tracker
 
 			if (actualSpy !== expectedSpy) {
-				return failed(`unexpected call to ${actualSpy}, expecting a call to ${expectedSpy}`)
+				return failed({ type: "unexpected", actualSpy, expectedSpy })
 			}
 
 			return assertArguments(actualTracker.createReport().argValues)
 				.then(null, (message) => {
-					return createUnexpectedCallArguments({ tracker: actualTracker, message })
+					return failed({ type: "mismatch", tracker: actualTracker, message })
 				})
 				.then(() => {
 					const isLastCallSpyWith = behaviours
@@ -66,7 +76,7 @@ export const willCallSpyWith = createFactory(pureBehaviour, (spy, ...argValues) 
 					}
 					const extraCalls = actualCalls.slice(index + 1)
 					if (extraCalls.length) {
-						return failed(createExtraCallMessage({ spy, calls: extraCalls }))
+						return failed({ type: "extra", calls: extraCalls })
 					}
 				})
 		}
@@ -75,6 +85,8 @@ export const willCallSpyWith = createFactory(pureBehaviour, (spy, ...argValues) 
 	return {
 		spy,
 		argValues,
+		createExpectedDescription,
+		createActualDescription,
 		assert,
 	}
 })
