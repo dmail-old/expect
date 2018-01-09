@@ -61,14 +61,24 @@ const createLazyGetter = (getter) => {
 	}
 }
 
-const createUnexpectedBehaviourMessage = ({ fn, behaviour, message }) => {
+const createUnexpectedBehaviourMessage = ({ fn, behaviour, param }) => {
 	const functionName = fn.name ? `${fn.name} function` : "function"
+
+	if (behaviour.createExpectedDescription) {
+		return `actual:
+${behaviour.createActualDescription({ fn: functionName, ...param })}
+
+expected:
+${behaviour.createExpectedDescription({ fn: functionName })}
+`
+	}
 
 	if (isProductOf(willReturnWith, behaviour)) {
 		return `unexpected ${functionName} return value:
-${message}`
+${param}`
 	}
-	return message
+
+	return param
 }
 
 export const aFunctionWhich = sign(
@@ -172,9 +182,9 @@ export const aFunctionWhich = sign(
 				})
 
 				return sequence(assertions, (assertion, index) => {
-					return assertion().then(null, (message) => {
+					return assertion().then(null, (param) => {
 						const behaviour = behaviours[index]
-						return createUnexpectedBehaviourMessage({ fn: actual, behaviour, message })
+						return createUnexpectedBehaviourMessage({ fn: actual, behaviour, param })
 					})
 				}).then(() => undefined)
 			})

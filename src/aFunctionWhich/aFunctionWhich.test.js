@@ -1,6 +1,7 @@
 import { aFunctionWhich } from "./aFunctionWhich.js"
 import { willReturnWith } from "./willReturnWith.js"
 import { willCallSpyWith } from "./willCallSpyWith.js"
+import { willNotCallSpy } from "./willNotCallSpy.js"
 import { plan } from "@dmail/test"
 import assert from "assert"
 import { createSpy } from "@dmail/spy"
@@ -66,6 +67,37 @@ null
 [
 	"beee"
 ]
+`,
+			)
+		})
+	})
+
+	scenario("willNotCallSpy", () => {
+		test("when spy not called", () => {
+			const spy = createSpy("test")
+			const fn = () => {}
+			const assertion = aFunctionWhich(willNotCallSpy(spy))
+			assertPassedWith(assertion(fn))
+		})
+
+		test("when spy gets called once", () => {
+			const spy = createSpy("test")
+			const fn = () => {
+				spy(0, 1)
+			}
+			const assertion = aFunctionWhich(willNotCallSpy(spy))
+
+			assertFailedWith(
+				assertion(fn),
+				`actual:
+fn function called test spy 1 times:
+[
+	0,
+	1
+]
+
+expected:
+fn function must never call test spy
 `,
 			)
 		})

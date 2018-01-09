@@ -14,11 +14,9 @@ const createMissingCallMessage = ({ spy, calls }) => {
 const createExtraCallMessage = ({ spy, calls }) => {
 	// we should limit the number of extra calls displayed (like 3 and add a sentend like and 345 more)
 	const extraCalls = calls.map((call) => {
-		return `
-${uneval(call.tracker.createReport().argValues)}
-`
+		return `${uneval(call.tracker.createReport().argValues)}`
 	})
-	return `${calls.length} extra call to ${spy}:${extraCalls.join("")}`
+	return `${calls.length} extra call to ${spy}:${extraCalls.join("\n")}`
 }
 
 const createUnexpectedCallArguments = ({ tracker, message }) => {
