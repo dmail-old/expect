@@ -1,9 +1,12 @@
 import { sequence, passed, failed } from "@dmail/action"
-import { isAssertion, createMatcherFromFunction } from "../matcher.js"
+import { createMatcherFromFunction } from "../matcher.js"
 import { is } from "../is/is.js"
-import { getOwnPropertyNamesAndSymbols, hasProperty, canSetOwnProperty } from "../helper.js"
+import { getOwnPropertyNamesAndSymbols, canSetOwnProperty } from "../helper.js"
 import { createAnonymousTrace, getPointerFromTrace, comparePointer } from "../trace/trace.js"
 import { uneval } from "@dmail/uneval"
+import { createFactory } from "@dmail/mixin"
+import { pureContract, isContract } from "../contract.js"
+import { hasProperty } from "./hasProperty.js"
 
 const getValueNameFromTrace = ({ getName, getParentTrace }) => {
 	const name = getName()
@@ -25,11 +28,6 @@ const getPointerName = (pointer) => {
 }
 
 const failureMessageCreators = {
-	"missing-property": ({ expectedTrace }) => {
-		return `missing property ${expectedTrace.getName()} on ${getValueNameFromTrace(
-			expectedTrace.getParentTrace(),
-		)}`
-	},
 	mismatch: ({ expectedTrace, message }) => {
 		return `unexpected ${getValueNameFromTrace(expectedTrace)}:
 ${message}`
@@ -79,6 +77,32 @@ const propertyIsEnumerable = (object, name) => {
 	return Object.prototype.propertyIsEnumerable.call(object, name)
 }
 
+const hasPointerContract = createFactory(pureContract, ({ setValidator }) => {
+	const getActualDescription = ({ actual }) => {
+		return actual ? `a pointer to ${getPointerName(actual)}` : uneval(actual)
+	}
+
+	const getExpectedDescription = ({ expected }) => `a pointer to ${getPointerName(expected)}`
+
+	setValidator(({ actual }) => {
+		return actual !== null
+	})
+
+	return { getActualDescription, getExpectedDescription }
+})
+
+const noPointerContract = createFactory(pureContract, ({ setValidator }) => {
+	setValidator(({ actual }) => {
+		return actual === null
+	})
+})
+
+const pointerContract = createFactory(pureContract, ({ setValidator }) => {
+	setValidator(({ actual, expected }) => {
+		return comparePointer(expected, actual)
+	})
+})
+
 const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 	const createPropertiesMatcher = ({
 		actualTrace: actualOwnerTrace,
@@ -91,79 +115,55 @@ const compareProperties = ({ allowExtra, extraMustBeEnumerable }) => {
 			const expectedTrace = expectedOwnerTrace.discoverProperty(name)
 			const actualTrace = actualOwnerTrace.discoverProperty(name)
 
-			if (hasProperty(actualOwner, name) === false) {
-				return failed({
-					type: "missing-property",
-					expectedTrace,
+			return hasProperty
+				.sign(name)
+				.validate(actualOwner)
+				.then(() => {
+					const actual = actualTrace.getValue()
+					const expected = expectedTrace.getValue()
+
+					if (isContract(expected)) {
+						return expected.validate(actual)
+					}
+
+					const expectedCanSetOwnProperty = canSetOwnProperty(expected)
+					const actualCanSetOwnProperty = canSetOwnProperty(actual)
+
+					if (
+						expectedCanSetOwnProperty !== actualCanSetOwnProperty ||
+						expectedCanSetOwnProperty === false
+					) {
+						return is.sign(expected).validate(actual)
+					}
+
+					const expectedPointer = getPointerFromTrace(expectedTrace, expected)
+					const actualPointer = getPointerFromTrace(actualTrace, actual)
+
+					if (expectedPointer === null) {
+						return noPointerContract
+							.sign()
+							.validate(actualPointer)
+							.then(() => {
+								return createPropertiesMatcher({
+									expectedTrace,
+									actualTrace,
+								})
+							})
+					}
+
+					return hasPointerContract
+						.sign()
+						.validate(actualPointer)
+						.then(() => {
+							return pointerContract.sign(expectedPointer).validate(actualPointer)
+						})
+						.then(() => {
+							return createPropertiesMatcher({
+								expectedTrace,
+								actualTrace,
+							})
+						})
 				})
-			}
-
-			const actual = actualTrace.getValue()
-			const expected = expectedTrace.getValue()
-
-			if (isAssertion(expected)) {
-				return expected(actual).then(null, (message) =>
-					failed({
-						type: "mismatch",
-						expectedTrace,
-						message,
-					}),
-				)
-			}
-
-			const expectedCanSetOwnProperty = canSetOwnProperty(expected)
-			const actualCanSetOwnProperty = canSetOwnProperty(actual)
-
-			if (
-				expectedCanSetOwnProperty !== actualCanSetOwnProperty ||
-				expectedCanSetOwnProperty === false
-			) {
-				return is(expected)(actual).then(null, (message) =>
-					failed({
-						type: "mismatch",
-						expectedTrace,
-						message,
-					}),
-				)
-			}
-
-			const expectedPointer = getPointerFromTrace(expectedTrace, expected)
-			const actualPointer = getPointerFromTrace(actualTrace, actual)
-
-			if (expectedPointer && actualPointer === null) {
-				return failed({
-					type: "missing-pointer",
-					expectedTrace,
-					expectedPointer,
-					actual,
-				})
-			}
-
-			if (actualPointer && expectedPointer === null) {
-				return failed({
-					type: "unexpected-pointer",
-					expectedTrace,
-					expected,
-					actualPointer,
-				})
-			}
-
-			if (expectedPointer && actualPointer) {
-				if (comparePointer(expectedPointer, actualPointer) === false) {
-					return failed({
-						type: "pointer-mismatch",
-						expectedTrace,
-						expectedPointer,
-						actualPointer,
-					})
-				}
-				return passed()
-			}
-
-			return createPropertiesMatcher({
-				expectedTrace,
-				actualTrace,
-			})
 		}).then(() => {
 			if (allowExtra) {
 				return passed()
