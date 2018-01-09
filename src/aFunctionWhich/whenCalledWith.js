@@ -1,14 +1,10 @@
-import { createBehaviourFactory } from "../behaviour.js"
+import { createFactory } from "@dmail/mixin"
+import { pureBehaviour } from "../behaviour.js"
 
-const whenCalledWithBehaviour = {
-	type: "whenCalledWith",
-	api: (...argValues) => ({ argValues }),
-	preventDuplicate: true,
-	isDuplicate: true,
-	expect: ({ argValues }, { setArgValues }) => {
+export const whenCalledWith = createFactory(pureBehaviour, (...argValues) => {
+	const assert = ({ setArgValues }) => {
 		setArgValues(argValues)
 		return () => {}
-	},
-}
-
-export const whenCalledWith = createBehaviourFactory(whenCalledWithBehaviour)
+	}
+	return { assert }
+})

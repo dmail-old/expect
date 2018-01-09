@@ -1,21 +1,32 @@
 import { createMatcherFromFunction } from "../matcher.js"
-import { constructedBy, prefixValue } from "../constructedBy/constructedBy.js"
+import { constructedBy } from "../constructedBy/constructedBy.js"
+import { failed, passed } from "@dmail/action"
 
 const createWrongTypeMessage = (expected, actual) =>
-	`expect a number above ${expected} but got ${prefixValue(actual)}: ${actual}`
+	`actual:
+${actual}
+
+expected:
+a number above ${expected}
+`
 
 const createTooLowMessage = (expected, actual) =>
-	`expect a number above ${expected} but got ${actual}`
+	`actual:
+${actual}
+
+expected:
+a number above ${expected}
+`
 
 const constructedByNumber = constructedBy(Number)
 
-export const aNumberAbove = createMatcherFromFunction(({ actual, expected, fail, pass }) => {
+export const aNumberAbove = createMatcherFromFunction(({ actual, expected }) => {
 	return constructedByNumber(actual).then(
 		() => {
 			if (actual <= expected) {
-				return fail(createTooLowMessage(expected, actual))
+				return failed(createTooLowMessage(expected, actual))
 			}
-			return pass()
+			return passed()
 		},
 		() => createWrongTypeMessage(expected, actual),
 	)

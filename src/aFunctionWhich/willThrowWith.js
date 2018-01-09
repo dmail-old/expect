@@ -5,20 +5,21 @@ import { createAssertionFrom } from "../createAssertionFrom/createAssertionFrom.
 
 export const willThrowWith = createFactory(pureBehaviour, (value) => {
 	const assertThrowedValue = createAssertionFrom(value)
+	const assert = ({ observeResultState, observeResultValue }) => {
+		const getResultState = observeResultState()
+		const getResultValue = observeResultValue()
+
+		return () => {
+			const state = getResultState()
+			if (state === "returned") {
+				return failed(`missing throw`)
+			}
+			return assertThrowedValue(getResultValue())
+		}
+	}
 
 	return {
 		value,
-		assert: ({ observeResultState, observeResultValue }) => {
-			const getResultState = observeResultState()
-			const getResultValue = observeResultValue()
-
-			return () => {
-				const state = getResultState()
-				if (state === "returned") {
-					return failed(`missing throw`)
-				}
-				return assertThrowedValue(getResultValue())
-			}
-		},
+		assert,
 	}
 })

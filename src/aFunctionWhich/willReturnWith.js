@@ -4,13 +4,14 @@ import { createAssertionFrom } from "../createAssertionFrom/createAssertionFrom.
 
 export const willReturnWith = createFactory(pureBehaviour, (value) => {
 	const assertReturnedValue = createAssertionFrom(value)
+	const assert = ({ observeResultValue }) => {
+		const getResultValue = observeResultValue()
+
+		return () => assertReturnedValue(getResultValue())
+	}
 
 	return {
 		value,
-		assert: ({ observeResultValue }) => {
-			const getResultValue = observeResultValue()
-
-			return () => assertReturnedValue(getResultValue())
-		},
+		assert,
 	}
 })

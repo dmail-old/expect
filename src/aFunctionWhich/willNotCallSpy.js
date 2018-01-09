@@ -15,18 +15,20 @@ ${unexpectedCallMessages.join("")}`
 }
 
 export const willNotCallSpy = createFactory(pureBehaviour, (spy) => {
+	const assert = ({ observeCalls }) => {
+		const getCalls = observeCalls(spy)
+
+		return () => {
+			const unexpectedCalls = getCalls()
+			if (unexpectedCalls.length) {
+				return failed(createUnexpectedCallsMessage({ spy, calls: unexpectedCalls }))
+			}
+			return passed()
+		}
+	}
+
 	return {
 		spy,
-		assert: ({ observeCalls }) => {
-			const getCalls = observeCalls(spy)
-
-			return () => {
-				const unexpectedCalls = getCalls()
-				if (unexpectedCalls.length) {
-					return failed(createUnexpectedCallsMessage({ spy, calls: unexpectedCalls }))
-				}
-				return passed()
-			}
-		},
+		assert,
 	}
 })

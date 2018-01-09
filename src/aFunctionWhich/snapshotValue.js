@@ -101,12 +101,11 @@ export const createMutationsMessages = (mutations) => {
 				return accumulator.concat(
 					`${action} ${String(mutation.property)} definition to ${uneval(
 						mutation.nextDescriptor,
-					)} from ${uneval(mutation.descriptor.value)}`,
+					)} from ${uneval(mutation.descriptor)}`,
 				)
 			}
 
 			if (mutation.type === "mutated") {
-				// faudrais filter mutation.mutations qui sont none
 				return accumulator.concat(createMutationsMessages(mutation.mutations))
 			}
 			return accumulator

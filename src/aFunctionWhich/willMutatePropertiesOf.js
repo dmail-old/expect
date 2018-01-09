@@ -1,4 +1,5 @@
-import { createBehaviourFactory } from "../behaviour.js"
+import { createFactory } from "@dmail/mixin"
+import { pureBehaviour } from "../behaviour.js"
 import { getOwnPropertyNamesAndSymbols } from "../helper.js"
 import { sequence, failed } from "@dmail/action"
 import { createAssertionFromFunction } from "../matcher.js"
@@ -9,8 +10,8 @@ const expectDeletedProperty = {}
 
 export const deleted = () => expectDeletedProperty
 
-export const willMutatePropertiesOf = createBehaviourFactory((value, properties) => {
-	return ({ observeMutations }) => {
+export const willMutatePropertiesOf = createFactory(pureBehaviour, (value, properties) => {
+	const assert = ({ observeMutations }) => {
 		const expectedPropertyMutations = getOwnPropertyNamesAndSymbols(properties)
 		if (expectedPropertyMutations.length === 0) {
 			throw new Error(
@@ -63,9 +64,15 @@ export const willMutatePropertiesOf = createBehaviourFactory((value, properties)
 				if (extraMutations.length) {
 					const messages = createMutationsMessages(extraMutations)
 					return failed(`${messages.length} extra mutations:
-					${messages.join("\n")}`)
+				${messages.join("\n")}`)
 				}
 			})
 		}
+	}
+
+	return {
+		value,
+		properties,
+		assert,
 	}
 })

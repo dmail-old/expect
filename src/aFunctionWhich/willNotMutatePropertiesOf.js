@@ -1,4 +1,5 @@
-import { createBehaviourFactory } from "../behaviour.js"
+import { createFactory } from "@dmail/mixin"
+import { pureBehaviour } from "../behaviour.js"
 import { failed, passed } from "@dmail/action"
 import { createMutationsMessages } from "./snapshotValue.js"
 
@@ -7,8 +8,8 @@ const createUnexpectedMutationsMessage = ({ messages }) => {
 	${messages.join("\n")}`
 }
 
-export const willNotMutatePropertiesOf = createBehaviourFactory((value) => {
-	return ({ observeMutations }) => {
+export const willNotMutatePropertiesOf = createFactory(pureBehaviour, (value) => {
+	const assert = ({ observeMutations }) => {
 		const getMutations = observeMutations(value)
 
 		return () => {
@@ -18,5 +19,10 @@ export const willNotMutatePropertiesOf = createBehaviourFactory((value) => {
 			}
 			return passed()
 		}
+	}
+
+	return {
+		value,
+		assert,
 	}
 })

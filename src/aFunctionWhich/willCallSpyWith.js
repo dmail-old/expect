@@ -29,52 +29,54 @@ ${message}`
 export const willCallSpyWith = createFactory(pureBehaviour, (spy, ...argValues) => {
 	const assertArguments = exactProperties(argValues)
 
+	const assert = ({ observeCalls, index, behaviours }) => {
+		const expectedSpy = spy
+		const previousSimilarBehavioursWithSameSpy = behaviours
+			.slice(0, index - 1)
+			.filter((previousBehaviour) => {
+				return isProductOf(willCallSpyWith, previousBehaviour) && previousBehaviour.spy === spy
+			})
+		const expectedIndex = previousSimilarBehavioursWithSameSpy.length
+		const getActualCalls = observeCalls(spy)
+
+		return () => {
+			const actualCalls = getActualCalls()
+			const actualCall = actualCalls[expectedIndex]
+
+			if (!actualCall) {
+				return failed(createMissingCallMessage({ index: expectedIndex, spy, calls: actualCalls }))
+			}
+
+			const actualSpy = actualCall.spy
+			const actualTracker = actualCall.tracker
+
+			if (actualSpy !== expectedSpy) {
+				return failed(`unexpected call to ${actualSpy}, expecting a call to ${expectedSpy}`)
+			}
+
+			return assertArguments(actualTracker.createReport().argValues)
+				.then(null, (message) => {
+					return createUnexpectedCallArguments({ tracker: actualTracker, message })
+				})
+				.then(() => {
+					const isLastCallSpyWith = behaviours
+						.slice(index)
+						.some((behaviour) => isProductOf(willCallSpyWith, behaviour))
+
+					if (isLastCallSpyWith === false) {
+						return
+					}
+					const extraCalls = actualCalls.slice(index + 1)
+					if (extraCalls.length) {
+						return failed(createExtraCallMessage({ spy, calls: extraCalls }))
+					}
+				})
+		}
+	}
+
 	return {
 		spy,
 		argValues,
-		assert: ({ observeCalls, index, behaviours }) => {
-			const expectedSpy = spy
-			const previousSimilarBehavioursWithSameSpy = behaviours
-				.slice(0, index - 1)
-				.filter((previousBehaviour) => {
-					return isProductOf(willCallSpyWith, previousBehaviour) && previousBehaviour.spy === spy
-				})
-			const expectedIndex = previousSimilarBehavioursWithSameSpy.length
-			const getActualCalls = observeCalls(spy)
-
-			return () => {
-				const actualCalls = getActualCalls()
-				const actualCall = actualCalls[expectedIndex]
-
-				if (!actualCall) {
-					return failed(createMissingCallMessage({ index: expectedIndex, spy, calls: actualCalls }))
-				}
-
-				const actualSpy = actualCall.spy
-				const actualTracker = actualCall.tracker
-
-				if (actualSpy !== expectedSpy) {
-					return failed(`unexpected call to ${actualSpy}, expecting a call to ${expectedSpy}`)
-				}
-
-				return assertArguments(actualTracker.createReport().argValues)
-					.then(null, (message) => {
-						return createUnexpectedCallArguments({ tracker: actualTracker, message })
-					})
-					.then(() => {
-						const isLastCallSpyWith = behaviours
-							.slice(index)
-							.some((behaviour) => isProductOf(willCallSpyWith, behaviour))
-
-						if (isLastCallSpyWith === false) {
-							return
-						}
-						const extraCalls = actualCalls.slice(index + 1)
-						if (extraCalls.length) {
-							return failed(createExtraCallMessage({ spy, calls: extraCalls }))
-						}
-					})
-			}
-		},
+		assert,
 	}
 })

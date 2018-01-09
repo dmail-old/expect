@@ -1,5 +1,5 @@
-import { anyNumberAbove } from "./anyNumberAbove.js"
-import { createTest } from "@dmail/test"
+import { aNumberAbove } from "./aNumberAbove.js"
+import { plan } from "@dmail/test"
 import assert from "assert"
 
 const assertPassedWith = (action, value) => {
@@ -12,21 +12,44 @@ const assertFailedWith = (action, value) => {
 	assert.equal(action.getState(), "failed")
 }
 
-export default createTest({
-	"anyNumberAbove(10, 9)": ({ pass }) => {
-		assertFailedWith(anyNumberAbove(10)(9), "expect a number above 10 but got 9")
-		pass()
-	},
-	"anyNumberAbove(10)(10)": ({ pass }) => {
-		assertFailedWith(anyNumberAbove(10)(10), "expect a number above 10 but got 10")
-		pass()
-	},
-	"anyNumberAbove(10, 11)": ({ pass }) => {
-		assertPassedWith(anyNumberAbove(10)(11))
-		pass()
-	},
-	"anyNumberAbove(10)(true)": ({ pass }) => {
-		assertFailedWith(anyNumberAbove(10)(true), "expect a number above 10 but got a boolean: true")
-		pass()
-	},
+export const test = plan("aNumberAbove", ({ test }) => {
+	test("anyNumberAbove(10, 9)", () => {
+		assertFailedWith(
+			aNumberAbove(10)(9),
+			`actual:
+9
+
+expected:
+a number above 10
+`,
+		)
+	})
+
+	test("anyNumberAbove(10)(10)", () => {
+		assertFailedWith(
+			aNumberAbove(10)(10),
+			`actual:
+10
+
+expected:
+a number above 10
+`,
+		)
+	})
+
+	test("anyNumberAbove(10, 11)", () => {
+		assertPassedWith(aNumberAbove(10)(11))
+	})
+
+	test("anyNumberAbove(10)(true)", () => {
+		assertFailedWith(
+			aNumberAbove(10)(true),
+			`actual:
+true
+
+expected:
+a number above 10
+`,
+		)
+	})
 })
