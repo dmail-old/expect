@@ -1,4 +1,4 @@
-import { mixin, pure, isProductOf, replicate, createFactory } from "@dmail/mixin"
+import { pure, isProductOf, createFactory } from "@dmail/mixin"
 /*
 
 la particuliarité avec les contrats c'est que lorsqu'ils fails
