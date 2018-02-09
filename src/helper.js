@@ -52,3 +52,17 @@ export const getOwnPropertyNamesAndSymbols = (value) => {
 	}
 	return []
 }
+
+export const isPrimitive = (value) => {
+	if (value === null) {
+		return true
+	}
+	if (value === undefined) {
+		return true
+	}
+	const type = typeof value
+	if (type === "string" || type === "number" || type === "boolean" || type === "symbol") {
+		return true
+	}
+	return false
+}
