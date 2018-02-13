@@ -53,6 +53,26 @@ export const getOwnPropertyNamesAndSymbols = (value) => {
 	return []
 }
 
+export const defineProperty = (object, nameOrSymbol, attributes) => {
+	const descriptor = Object.getOwnPropertyDescriptor(object, nameOrSymbol)
+	let desiredDescriptor
+
+	if (descriptor) {
+		if (Object.keys(attributes).every((name) => descriptor[name] === attributes[name])) {
+			return object
+		}
+		desiredDescriptor = { ...descriptor, ...attributes }
+	} else {
+		desiredDescriptor = { ...attributes }
+	}
+
+	const objectWithModifiedProperty = { ...object }
+
+	Object.defineProperty(objectWithModifiedProperty, nameOrSymbol, desiredDescriptor)
+
+	return objectWithModifiedProperty
+}
+
 export const isPrimitive = (value) => {
 	if (value === null) {
 		return true

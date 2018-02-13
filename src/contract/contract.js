@@ -1,4 +1,5 @@
-import { mixin, pure, hasTalent, hasTalentOf } from "@dmail/mixin"
+import { mixin, pure, hasTalent } from "@dmail/mixin"
+import { uneval } from "@dmail/uneval"
 // import { reduce } from "@dmail/action"
 
 // const reduce = (array, reducer, initialValue) => array.reduce(reducer, initialValue)
@@ -14,7 +15,7 @@ const collectContracts = (contract) => {
 	return contracts
 }
 
-const execute = ({ self: contract, map, expected }, value) => {
+export const execute = ({ self: contract, expected, map, test }, value) => {
 	const contracts = collectContracts(contract)
 
 	// en fait il suffit lorsqu'on a une erreur de retourner ce qui merde
@@ -23,25 +24,16 @@ const execute = ({ self: contract, map, expected }, value) => {
 	// il n'y a pas besoin d'avoir un objet qui soit le ixin des contrats
 
 	contracts.forEach((contract) => {
-		let validation
+		const validation = mixin(contract, () => {
+			const actual = map(value)
+			const valid = test(actual, expected)
 
-		if (hasTalentOf(contract, expected)) {
-			// j'ai besoin de la previous validation et pas du previous contract
-			validation = execute(expected, contract.previous ? contract.previous.actual : value)
-		} else {
-			validation = mixin(contract, () => {
-				// si y'a un contrat précédent
-				// faudrais récup du précédent je dirais
-				const actual = map(value)
-				const valid = actual === expected
-
-				return {
-					value,
-					actual,
-					valid,
-				}
-			})
-		}
+			return {
+				value,
+				actual,
+				valid,
+			}
+		})
 
 		if (validation.valid === false) {
 			// faudrais faire un truc pour arrêter la
@@ -51,55 +43,62 @@ const execute = ({ self: contract, map, expected }, value) => {
 }
 
 const contractTalent = ({ self: contract }) => {
-	// if (hasTalentOf(contract, expected)) {
-	// 	return mixin(expected, () => ({ previous: contract }))
-	// }
-
-	const chain = (nextContract) => {
+	const expect = (nextContract) => {
+		// nextContract peut être lui même une sous-chaine de contrat
+		// qui devra alors s'appliquer sur la valeur du précédent
+		// il faut donc une structure en arbre
+		// mais j'avoue je sais pas comment faire
 		return mixin(nextContract, () => ({ previous: contract }))
 	}
 
-	return { chain }
+	return { expect }
 }
 
-export const createContract = ({ expected, map = (value) => value, ...remainingProps }) => {
-	return mixin(pure, () => ({ expected, map, ...remainingProps }), contractTalent)
+export const createContract = (props) => {
+	return mixin(pure, () => props, contractTalent)
 }
 
 export const isContract = (value) => hasTalent(contractTalent, value)
 
-export const mustBe = (expected) =>
-	createContract({
-		expected,
+const mustBe = (expected) => {
+	return createContract({
+		map: (value) => value,
+		test: (actual, expected) => actual === expected,
+		getExpectedDescription: () => `must be ${uneval(expected)}`,
 	})
+}
 
-const propertyPresence = (nameOrSymbol, expected) =>
-	createContract({
-		expected,
-		nameOrSymbol,
+const mustHaveOwnProperty = (nameOrSymbol) => {
+	return createContract({
 		map: (value) => hasOwnProperty(value, nameOrSymbol),
+		test: (actual) => actual === true,
+		getSubjectDescription: () => `${nameOrSymbol} own property`,
+		getExpectedDescription: () => `must be present`,
 	})
+}
 
-export const mustHaveOwnProperty = (nameOrSymbol) => propertyPresence(nameOrSymbol, true)
-
-export const propertyDescriptorAttribute = (nameOrSymbol, attribute, expected) =>
-	createContract({
-		expected,
+const mustHavePropertyDescriptor = (nameOrSymbol) => {
+	return createContract({
 		nameOrSymbol,
-		attribute,
-		map: (value) => Object.getOwnPropertyDescriptor(value, nameOrSymbol)[attribute],
+		map: (value) => Object.getOwnPropertyDescriptor(value, nameOrSymbol),
+		test: (actual) => typeof actual === "object",
+		getSubjectDescription: () => `${nameOrSymbol} property descriptor`,
+		getExpectedDescription: () => `must be an object`,
 	})
+}
 
-const mustHaveFooOwnProperty = mustHaveOwnProperty("foo")
-const fooOwnPropertyMustBeWritable = propertyDescriptorAttribute("foo", "writable", true)
-const fooOwnPropertyValueMustHaveBarOwnProperty = propertyDescriptorAttribute(
-	"foo",
-	"value",
-	mustHaveOwnProperty("bar"),
+const mustHaveOnlyKeys = (allowedKeys) => {
+	return createContract({
+		map: (value) => Object.keys(value),
+		test: (actual) => actual.filter((key) => allowedKeys.includes(key) === false).length === 0,
+		getSubjectDescription: () => `keys`,
+		getExpectedDescription: () => `must have only these keys: ${allowedKeys}`,
+	})
+}
+
+export const contract = createContract().expect(
+	mustHavePropertyDescriptor("foo")
+		.expect(mustHaveOwnProperty("writable").expect(mustBe(true)))
+		.expect(mustHaveOwnProperty("value").expect())
+		.expect(mustHaveOnlyKeys(["writable", "value", "configurable", "enumerable"])),
 )
-
-const contract = mustHaveFooOwnProperty
-	.chain(fooOwnPropertyMustBeWritable)
-	.chain(fooOwnPropertyValueMustHaveBarOwnProperty)
-
-execute(contract, { foo: true })
