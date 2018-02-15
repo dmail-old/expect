@@ -1,6 +1,6 @@
 {
 	"name": "@dmail/expect",
-	"version": "2.9.0",
+	"version": "3.0.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -19,25 +19,26 @@
 		"node": ">=8.6.0"
 	},
 	"dependencies": {
-		"@dmail/action": "1.7.0",
+		"@dmail/action": "3.0.0",
+		"@dmail/mixin": "6.0.0",
 		"@dmail/spy": "0.0.2",
 		"@dmail/uneval": "1.0.0"
 	},
 	"devDependencies": {
-		"@dmail/command": "0.1.1",
 		"@dmail/ensure": "0.0.2",
-		"@dmail/prettiest": "0.2.1",
-		"@dmail/shared-config": "1.1.1",
-		"@dmail/test": "2.2.0",
+		"@dmail/prettiest": "1.0.0",
+		"@dmail/shared-config": "3.1.0",
+		"@dmail/test": "6.0.0",
 		"babel-cli": "7.0.0-beta.0",
 		"babel-core": "7.0.0-beta.0",
 		"babel-eslint": "8.0.0",
+		"babel-plugin-transform-object-rest-spread": "^6.26.0",
 		"babel-preset-env": "2.0.0-beta.0",
 		"codecov": "2.3.0",
 		"eslint": "3.19.0",
 		"eslint-plugin-import": "2.6.0",
 		"nyc": "11.2.1",
-		"prettier": "1.7.0",
+		"prettier": "1.9.1",
 		"rimraf": "2.6.2"
 	},
 	"scripts": {
